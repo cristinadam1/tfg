@@ -1,0 +1,30 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "es-ES": {
+          "summary": "Skill de demostración para interacciones básicas",
+          "examplePhrases": [
+            "Alexa abre regreso al pasado",
+            "Alexa inicia regreso al pasado"
+          ],
+          "name": "regreso al pasado",
+          "description": "Juego serio programado para adultos mayores."
+        }
+      },
+      "isAvailableWorldwide": true,
+      "testingInstructions": "Di 'Abre regreso al pasado'.",
+      "category": "KNOWLEDGE_AND_TRIVIA",
+      "distributionCountries": []
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "arn:aws:lambda:eu-west-1:524393057187:function:lambdaskilluno",
+          "sslCertificateType": "Wildcard"
+        }
+      }
+    },
+    "manifestVersion": "1.0"
+  }
+}

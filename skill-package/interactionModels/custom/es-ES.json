@@ -1,0 +1,147 @@
+{
+    "interactionModel": {
+      "languageModel": {
+        "invocationName": "regreso al pasado",
+        "intents": [
+          {
+            "name": "AMAZON.CancelIntent",
+            "samples": [
+              "cancelar",
+              "no quiero continuar",
+              "déjalo aquí",
+              "quiero salir"
+            ]
+          },
+          {
+            "name": "AMAZON.HelpIntent",
+            "samples": [
+              "ayuda",
+              "qué puedo hacer",
+              "cómo funciona esto",
+              "necesito ayuda"
+            ]
+          },
+          {
+            "name": "SaveColorIntent",
+            "slots": [
+              {
+                "name": "color",
+                "type": "AMAZON.Color"  
+              },
+              {
+                "name": "colorPersonalizado",
+                "type": "AMAZON.SearchQuery"  
+              }
+            ],
+            "samples": [
+              "guarda que mi color favorito es {color}",
+              "mi color es {colorPersonalizado}",
+              "recuerda que me gusta el {colorPersonalizado}"
+            ]
+          },
+          {
+            "name": "GetFavoriteSongIntent",
+            "slots": [
+              {
+                "name": "song",
+                "type": "AMAZON.SearchQuery"  
+              }
+            ],
+            "samples": [
+              "Creo que {song}",
+              "Suelo escuchar {song}",
+              "Me gusta mucho {song}",
+              "I like {song}",
+              "My favourite song is {song}",
+              "me gusta {song} para relajarme",
+              "escucho {song} mucho",
+              "me encanta la canción {song}"
+            ]
+          },
+          {
+            "name": "GetPlayerNameIntent",
+            "slots": [
+              {
+                "name": "nombre",
+                "type": "AMAZON.FirstName"  
+              }
+            ],
+            "samples": [
+              "suelen llamarme {nombre}",
+              "me gusta que me llamen {nombre}",
+              "I'm {nombre}",
+              "I am {nombre}"
+            ]
+          },
+          {
+            "name": "PlayerCountIntent",
+            "slots": [
+              {
+                "name": "count",
+                "type": "AMAZON.NUMBER"  
+              }
+            ],
+            "samples": [
+              "estamos {count} jugadores",
+              "estamos {count} personas",
+              "{count} personas",
+              "Somos {count} personas",
+              "estamos {count}"
+            ]
+          },
+          {
+            "name": "AMAZON.StopIntent",
+            "samples": [
+              "para",
+              "detente",
+              "puedes callarte",
+              "termina"
+            ]
+          },
+          {
+            "name": "HelloWorldIntent",
+            "slots": [],
+            "samples": [
+              "hola",
+              "di hola mundo",
+              "salúdame",
+              "qué tal estás",
+              "buenos días",
+              "presentate",
+              "hola mi skill uno"
+            ]
+          },
+          {
+            "name": "SaveDataIntent",
+            "samples": [
+              "guarda mis datos",
+              "registra mi información",
+              "almacena esto"
+            ]
+          },
+          {
+            "name": "ReadDataIntent",
+            "samples": [
+              "lee mis datos",
+              "dime mi información",
+              "qué has guardado de mí"
+            ]
+          },
+          {
+            "name": "AMAZON.NavigateHomeIntent",
+            "samples": []
+          },
+          {
+            "name": "AMAZON.FallbackIntent",
+            "samples": [
+              "no te he entendido",
+              "puedes repetirlo",
+              "no sé qué decir",
+              "otra vez por favor"
+            ]
+          }
+        ],
+        "types": []
+      }
+    }
+  }

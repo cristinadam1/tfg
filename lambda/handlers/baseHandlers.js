@@ -7,7 +7,7 @@ const LaunchRequestHandler = {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
     },
     handle(handlerInput) {
-        const speakOutput = '¡Bienvenido a mi Skill! Puedes decirme "guarda mis datos" o "dime mi información". ¿En qué puedo ayudarte?';
+        const speakOutput = '¡Bienvenidos a regreso al pasado!';
         
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -23,7 +23,7 @@ const HelpIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.HelpIntent';
     },
     handle(handlerInput) {
-        const speakOutput = 'Puedo guardar y leer tus datos. Prueba diciendo: "guarda mi color favorito azul" o "dime mis datos guardados".';
+        const speakOutput = 'Puedo guardar y leer tus datos. Este es el HelpIntentHandler';
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -78,7 +78,7 @@ const FallbackIntentHandler = {
     }
 };
 
-const SaveColorHandler = {
+/* const SaveColorHandler = {
     canHandle(handlerInput) {
       return handlerInput.requestEnvelope.request.type === 'IntentRequest'
         && handlerInput.requestEnvelope.request.intent.name === 'SaveColorIntent';
@@ -105,7 +105,7 @@ const SaveColorHandler = {
         .speak(`¡Listo! Guardé que tu color favorito es ${color}.`)
         .getResponse();
     }
-  };
+  }; */
 
   const GetFavoriteSongIntentHandler = {
     canHandle(handlerInput) {
@@ -143,7 +143,7 @@ const SaveColorHandler = {
 // Exporta todos los handlers base
 module.exports = {
     LaunchRequestHandler,
-    SaveColorHandler,
+    //SaveColorHandler,
     HelpIntentHandler,
     CancelAndStopIntentHandler,
     ErrorHandler,

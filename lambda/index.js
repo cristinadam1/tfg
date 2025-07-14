@@ -6,7 +6,7 @@ exports.handler = Alexa.SkillBuilders.custom()
     .addRequestHandlers(
         baseHandlers.LaunchRequestHandler,
         baseHandlers.HelpIntentHandler,
-        baseHandlers.SaveColorHandler,
+        //baseHandlers.SaveColorHandler,
         //dbHandlers.SaveDataIntentHandler,
         baseHandlers.GetFavoriteSongIntentHandler,
         baseHandlers.FallbackIntentHandler

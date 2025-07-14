@@ -22,24 +22,6 @@
             ]
           },
           {
-            "name": "SaveColorIntent",
-            "slots": [
-              {
-                "name": "color",
-                "type": "AMAZON.Color"  
-              },
-              {
-                "name": "colorPersonalizado",
-                "type": "AMAZON.SearchQuery"  
-              }
-            ],
-            "samples": [
-              "guarda que mi color favorito es {color}",
-              "mi color es {colorPersonalizado}",
-              "recuerda que me gusta el {colorPersonalizado}"
-            ]
-          },
-          {
             "name": "GetFavoriteSongIntent",
             "slots": [
               {

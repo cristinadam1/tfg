@@ -1,27 +1,81 @@
-const db = require('../db/dynamodb');
+const AWS = require('aws-sdk');
+const dynamodb = new AWS.DynamoDB.DocumentClient({ region: 'eu-west-1' });
+
+const SONGS_TABLE = process.env.SONGS_TABLE || 'CancionesRegresoPasado';
+const PLAYERS_TABLE = process.env.PLAYERS_TABLE || 'JugadoresRegresoPasado';
 
 module.exports = {
-    SaveDataIntentHandler: {
-        canHandle(handlerInput) {
-            return handlerInput.requestEnvelope.request.type === 'IntentRequest'
-                && handlerInput.requestEnvelope.request.intent.name === 'SaveDataIntent';
-        },
-        async handle(handlerInput) {
-            const userId = handlerInput.requestEnvelope.session.user.userId;
-            
-            try {
-                await db.saveUserData(userId, {
-                    favoriteColor: handlerInput.requestEnvelope.request.intent.slots.color.value
-                });
-                return handlerInput.responseBuilder
-                    .speak('¡Datos guardados correctamente!')
-                    .getResponse();
-            } catch (error) {
-                console.error('Error saving to DynamoDB:', error);
-                return handlerInput.responseBuilder
-                    .speak('Hubo un error al guardar tus datos')
-                    .getResponse();
+    // Obtener URL de una canción
+    async getSongUrl(nombre) {
+        const params = {
+            TableName: SONGS_TABLE,
+            Key: { nombre }
+        };
+
+        try {
+            const result = await dynamodb.get(params).promise();
+            return result.Item ? result.Item.url : null;
+        } catch (error) {
+            console.error('Error al consultar la canción:', error);
+            return null;
+        }
+    },
+
+    // Guardar datos del jugador
+    async savePlayerData(sessionId, playerData) {
+        const params = {
+            TableName: PLAYERS_TABLE,
+            Item: {
+                sessionId,
+                ...playerData,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
             }
+        };
+
+        try {
+            await dynamodb.put(params).promise();
+            return true;
+        } catch (error) {
+            console.error('Error al guardar jugador:', error);
+            return false;
+        }
+    },
+
+    // Guardar toda la sesión de juego
+    async saveGameSession(sessionId, gameData) {
+        const params = {
+            TableName: PLAYERS_TABLE,
+            Item: {
+                sessionId,
+                ...gameData,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }
+        };
+
+        try {
+            await dynamodb.put(params).promise();
+            return true;
+        } catch (error) {
+            console.error('Error al guardar sesión:', error);
+            return false;
+        }
+    },
+
+    // Obtener sesión de juego
+    async getGameSession(sessionId) {
+        const params = {
+            TableName: PLAYERS_TABLE,
+            Key: { sessionId }
+        };
+
+        try {
+            const result = await dynamodb.get(params).promise();
+            return result.Item ? result.Item : null;
+        } catch (error) {
+            console.error('Error al obtener sesión:', error);
+            return null;
         }
     }
 };

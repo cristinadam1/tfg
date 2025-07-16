@@ -6,7 +6,7 @@ module.exports = {
     GAME_STARTED: 'GAME_STARTED', // Juego principal iniciado
     INDIVIDUAL_QUESTION: 'INDIVIDUAL_QUESTION', // Pregunta individual
     TEAM_QUESTION: 'TEAM_QUESTION', // Pregunta en equipo
-    FINAL_QUESTION: 'FINAL_QUESTION', // Pregunta final
+    FINAL_TEAM_QUESTION: 'FINAL_TEAM_QUESTION', // Pregunta final
     SHOW_RANKING: 'SHOW_RANKING', // Mostrando resultados
     ENDED: 'ENDED' // Juego terminado
   };

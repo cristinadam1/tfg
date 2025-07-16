@@ -79,7 +79,7 @@ const FallbackIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.FallbackIntent';
     },
     handle(handlerInput) {
-        const speakOutput = 'No he entendido eso. Prueba diciendo "ayuda".';
+        const speakOutput = 'Perdona, ¿podrías repetirmelo?.';
 
         return handlerInput.responseBuilder
             .speak(speakOutput)

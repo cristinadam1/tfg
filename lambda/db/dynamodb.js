@@ -1,11 +1,10 @@
 const AWS = require('aws-sdk');
 const dynamodb = new AWS.DynamoDB.DocumentClient({ region: 'eu-west-1' });
 
-const PLAYERS_TABLE = 'JuegoRegresoPasado'; // Nombre actualizado
+const PLAYERS_TABLE = 'JuegoRegresoPasado'; 
 const SONGS_TABLE = process.env.SONGS_TABLE || 'CancionesRegresoPasado';
 
 module.exports = {
-    // Función para guardar jugadores
     async saveGameSession(sessionId, gameData) {
         const params = {
             TableName: PLAYERS_TABLE,
@@ -27,7 +26,6 @@ module.exports = {
         }
     },
 
-    // Mantén tu función existente para canciones
     async getSongUrl(nombre) {
         const params = {
             TableName: SONGS_TABLE,

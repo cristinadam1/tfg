@@ -22,22 +22,37 @@
             ]
           },
           {
+            "name": "AMAZON.YesIntent",
+            "samples": [
+              "si"
+            ]
+          },
+          {
+            "name": "AMAZON.NoIntent",
+            "samples": [
+              "no",
+              "negativo",
+              "para nada",
+              "no gracias",
+              "en absoluto"
+            ]
+          },
+          {
             "name": "GetFavoriteSongIntent",
             "slots": [
               {
                 "name": "song",
-                "type": "AMAZON.SearchQuery"  
+                "type": "AMAZON.SearchQuery"
               }
             ],
             "samples": [
-              "Creo que {song}",
-              "Suelo escuchar {song}",
-              "Me gusta mucho {song}",
-              "I like {song}",
-              "My favourite song is {song}",
-              "me gusta {song} para relajarme",
-              "escucho {song} mucho",
-              "me encanta la canción {song}"
+              "mi canción favorita es {song}",
+              "me gusta {song}",
+              "escucho mucho {song}",
+              "mi tema preferido es {song}",
+              "{song} es mi favorita",
+              "me encanta {song}",
+              "de mi época me gustaba {song}"
             ]
           },
           {
@@ -45,14 +60,16 @@
             "slots": [
               {
                 "name": "nombre",
-                "type": "AMAZON.FirstName"  
+                "type": "AMAZON.FirstName"
               }
             ],
             "samples": [
-              "suelen llamarme {nombre}",
-              "me gusta que me llamen {nombre}",
-              "I'm {nombre}",
-              "I am {nombre}"
+              "me llamo {nombre}",
+              "soy {nombre}",
+              "mi nombre es {nombre}",
+              "puedes llamarme {nombre}",
+              "{nombre}",
+              "me conocen como {nombre}"
             ]
           },
           {
@@ -60,15 +77,16 @@
             "slots": [
               {
                 "name": "count",
-                "type": "AMAZON.NUMBER"  
+                "type": "AMAZON.NUMBER"
               }
             ],
             "samples": [
-              "estamos {count} jugadores",
-              "estamos {count} personas",
-              "{count} personas",
-              "Somos {count} personas",
-              "estamos {count}"
+              "somos {count} jugadores",
+              "jugamos {count} personas",
+              "contamos con {count} participantes",
+              "en total somos {count}",
+              "{count} jugadores",
+              "participamos {count} personas"
             ]
           },
           {
@@ -76,42 +94,10 @@
             "samples": [
               "para",
               "detente",
-              "puedes callarte",
-              "termina"
+              "termina",
+              "acaba aquí",
+              "puedes parar"
             ]
-          },
-          {
-            "name": "HelloWorldIntent",
-            "slots": [],
-            "samples": [
-              "hola",
-              "di hola mundo",
-              "salúdame",
-              "qué tal estás",
-              "buenos días",
-              "presentate",
-              "hola mi skill uno"
-            ]
-          },
-          {
-            "name": "SaveDataIntent",
-            "samples": [
-              "guarda mis datos",
-              "registra mi información",
-              "almacena esto"
-            ]
-          },
-          {
-            "name": "ReadDataIntent",
-            "samples": [
-              "lee mis datos",
-              "dime mi información",
-              "qué has guardado de mí"
-            ]
-          },
-          {
-            "name": "AMAZON.NavigateHomeIntent",
-            "samples": []
           },
           {
             "name": "AMAZON.FallbackIntent",
@@ -119,11 +105,77 @@
               "no te he entendido",
               "puedes repetirlo",
               "no sé qué decir",
-              "otra vez por favor"
+              "otra vez por favor",
+              "no he captado eso"
             ]
+          },
+          {
+            "name": "AnswerIntent",
+            "slots": [
+              {
+                "name": "answer",
+                "type": "AMAZON.SearchQuery"
+              }
+            ],
+            "samples": [
+              "la respuesta es {answer}",
+              "creo que es {answer}",
+              "diría que {answer}",
+              "decidimos que es {answer}"
+            ]
+          },
+          {
+            "name": "StartGameIntent",
+            "slots": [],
+            "samples": [
+              "sí vamos",
+              "claro que sí",
+              "por supuesto",
+              "empecemos",
+              "venga",
+              "adelante",
+              "vamos allá",
+              "comencemos",
+              "ya estoy listo",
+              "listo",
+              "vámonos",
+              "empieza",
+              "ok",
+              "de acuerdo"
+            ]
+          },
+          {
+            "name": "AMAZON.NavigateHomeIntent",
+            "samples": []
           }
         ],
-        "types": []
+        "types": [
+          {
+            "name": "DIRECTION_TYPE",
+            "values": [
+              {
+                "name": {
+                  "value": "izquierda",
+                  "synonyms": [
+                    "izquierda",
+                    "lado izquierdo",
+                    "mi izquierda"
+                  ]
+                }
+              },
+              {
+                "name": {
+                  "value": "derecha",
+                  "synonyms": [
+                    "derecha",
+                    "lado derecho",
+                    "mi derecha"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
       }
     }
   }

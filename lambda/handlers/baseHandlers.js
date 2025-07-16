@@ -1,6 +1,6 @@
 const Alexa = require('ask-sdk-core');
 const db = require('../db/dynamodb');
-const gameStates = require('./gameStates');
+const gameStates = require('../game/gameStates');
 
 
 const LaunchRequestHandler = {
@@ -66,7 +66,7 @@ const ErrorHandler = {
         //console.error(`Error handled: ${error.message}`);
         console.error('Error handled:', error);
         return handlerInput.responseBuilder
-            .speak('Lo siento, ha ocurrido un error. Por favor inténtalo de nuevo.')
+            .speak('Creo que no te he entendido. Por favor inténtalo de nuevo.')
             .reprompt('¿Necesitas ayuda? Prueba a decir "ayuda".')
             .getResponse();
     }
@@ -90,37 +90,73 @@ const FallbackIntentHandler = {
 
 const GetFavoriteSongIntentHandler = {
     canHandle(handlerInput) {
-      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
-             Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetFavoriteSongIntent';
+        const attributes = handlerInput.attributesManager.getSessionAttributes();
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+               Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetFavoriteSongIntent' &&
+               attributes.gameState === gameStates.ASKING_FAVORITE_SONGS;
     },
   
     async handle(handlerInput) {
-      const songName = Alexa.getSlotValue(handlerInput.requestEnvelope, 'song');
-  
-      if (!songName) {
-        return handlerInput.responseBuilder
-          .speak("No entendí el nombre de la canción. ¿Puedes repetirlo?")
-          .reprompt("¿Cuál es tu canción favorita?")
-          .getResponse();
-      }
-  
-      const url = await db.getSongUrl(songName);
-  
-      if (url) {
-        const speakOutput = `<speak>¡Buena elección! Aquí tienes un fragmento de ${songName}. <audio src="${url}"/></speak>`;
-        return handlerInput.responseBuilder
-          .speak(speakOutput)
-          .getResponse();
-      } else {
-        return handlerInput.responseBuilder
-          .speak(`No encontré la canción ${songName} en mi base de datos.`)
-          .reprompt("¿Quieres probar con otra canción?")
-          .getResponse();
-      }
+        const songName = Alexa.getSlotValue(handlerInput.requestEnvelope, 'song');
+        const { attributesManager } = handlerInput;
+        const attributes = attributesManager.getSessionAttributes();
+        
+        if (!songName) {
+            const currentPlayerName = attributes.players[attributes.currentPlayer].name;
+            return handlerInput.responseBuilder
+                .speak("No entendí el nombre de la canción. ¿Puedes repetirlo?")
+                .reprompt(`${currentPlayerName}, ¿cuál es tu canción favorita?`)
+                .getResponse();
+        }
+        
+        // Guardar la canción favorita del jugador
+        attributes.players[attributes.currentPlayer].favoriteSong = songName;
+        
+        // Obtener URL del audio
+        const url = await db.getSongUrl(songName);
+        
+        // Seleccionar siguiente jugador aleatorio que no haya dicho su canción
+        const playersWithoutSong = attributes.players
+            .map((player, index) => ({...player, index}))
+            .filter(player => !player.favoriteSong);
+        
+        if (playersWithoutSong.length > 0) {
+            const nextPlayer = playersWithoutSong[Math.floor(Math.random() * playersWithoutSong.length)];
+            attributes.currentPlayer = nextPlayer.index;
+            handlerInput.attributesManager.setSessionAttributes(attributes);
+            
+            let speakOutput;
+            if (url) {
+                speakOutput = `<speak>¡Buena elección! Aquí tienes un fragmento de ${songName}. <audio src="${url}"/> ${nextPlayer.name}, ¿y cuál es tu canción favorita?</speak>`;
+            } else {
+                speakOutput = `No encontré la canción ${songName} en mi base de datos. ${nextPlayer.name}, ¿cuál es tu canción favorita?`;
+            }
+            
+            return handlerInput.responseBuilder
+                .speak(speakOutput)
+                .reprompt(`${nextPlayer.name}, ¿cuál es tu canción favorita?`)
+                .getResponse();
+        } else {
+            // Todos han dicho su canción
+            attributes.gameState = gameStates.GAME_STARTED;
+            handlerInput.attributesManager.setSessionAttributes(attributes);
+            
+            let speakOutput;
+            if (url) {
+                speakOutput = `<speak>¡Buena elección! Aquí tienes un fragmento de ${songName}. <audio src="${url}"/> ¡Y con esto ya tenemos todas vuestras canciones favoritas! ¿Listos para empezar el juego?</speak>`;
+            } else {
+                speakOutput = `No encontré la canción ${songName} en mi base de datos. Pero no importa, ya tenemos todas vuestras canciones favoritas. ¿Listos para empezar el juego?`;
+            }
+            
+            return handlerInput.responseBuilder
+                .speak(speakOutput)
+                .reprompt("¿Queréis empezar el juego?")
+                .getResponse();
+        }
     }
-  };
+};
 
-  const PlayerCountIntentHandler = {
+const PlayerCountIntentHandler = {
     canHandle(handlerInput) {
       console.log('Verificando si PlayerCountIntentHandler puede manejar la solicitud');
       try {
@@ -188,66 +224,108 @@ const GetFavoriteSongIntentHandler = {
           .getResponse();
       }
     }
-  };
+};
 
-const GetPlayerNameIntentHandler = {
+  const GetPlayerNameIntentHandler = {
     canHandle(handlerInput) {
         const attributes = handlerInput.attributesManager.getSessionAttributes();
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
                Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetPlayerNameIntent' &&
                attributes.gameState === gameStates.REGISTERING_PLAYER_NAMES;
     },
+
     async handle(handlerInput) {
         const playerName = Alexa.getSlotValue(handlerInput.requestEnvelope, 'nombre');
         const { attributesManager, requestEnvelope } = handlerInput;
         const attributes = attributesManager.getSessionAttributes();
         
-        if (!playerName) {
+        // Validar nombre
+        if (!playerName || playerName.trim().length === 0) {
             return handlerInput.responseBuilder
                 .speak("No he entendido tu nombre. ¿Puedes repetirlo?")
                 .reprompt(`Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`)
                 .getResponse();
         }
-        
-        // Añadir jugador a la lista temporal en sesión
+
+        // Validar longitud del nombre
+        if (playerName.length > 20) {
+            return handlerInput.responseBuilder
+                .speak("El nombre es demasiado largo. Por favor usa un nombre más corto.")
+                .reprompt(`Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`)
+                .getResponse();
+        }
+
+        // Añadir jugador a la lista
         attributes.players.push({
-            name: playerName,
-            score: 0
+            name: playerName.trim(),
+            score: 0,
+            favoriteSong: null
         });
-        
+
         // Verificar si hemos registrado todos los nombres
         if (attributes.currentPlayer >= attributes.playerCount) {
-            // Guardar en DynamoDB - estructura actualizada para JuegoRegresoPasado
-            const success = await db.saveGameSession(requestEnvelope.session.sessionId, {
-                currentPlayer: attributes.currentPlayer,
-                gameState: attributes.gameState,
-                players: attributes.players
-            });
-            
-            if (!success) {
+            try {
+                // Guardar en DynamoDB
+                const success = await db.saveGameSession(requestEnvelope.session.sessionId, {
+                    currentPlayer: attributes.currentPlayer,
+                    gameState: attributes.gameState,
+                    players: attributes.players,
+                    createdAt: new Date().toISOString()
+                });
+
+                if (!success) {
+                    throw new Error('Error al guardar en DynamoDB');
+                }
+
+                // Cambiar estado del juego
+                attributes.gameState = gameStates.ASKING_FAVORITE_SONGS;
+                
+                // Seleccionar primer jugador aleatorio para canción
+                const firstPlayerIndex = Math.floor(Math.random() * attributes.players.length);
+                attributes.currentPlayer = firstPlayerIndex;
+                const firstPlayerName = attributes.players[firstPlayerIndex].name;
+                
+                // Mensajes aleatorios para hacerlo más natural
+                const welcomeMessages = [
+                    `¡Perfecto ${playerName}! Ahora que nos conocemos mejor, ${firstPlayerName}, ¿qué canción te hace recordar buenos tiempos?`,
+                    `¡Estupendo ${playerName}! La música une generaciones. ${firstPlayerName}, ¿cuál es esa canción que nunca te cansa?`,
+                    `¡Genial ${playerName}! Vamos a animar el ambiente. ${firstPlayerName}, ¿cuál es tu tema musical favorito?`
+                ];
+                
+                const randomMessage = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
+                
+                handlerInput.attributesManager.setSessionAttributes(attributes);
+                
                 return handlerInput.responseBuilder
-                    .speak("Hubo un problema al guardar los jugadores. Vamos a intentarlo de nuevo.")
-                    .reprompt("Jugador 1, ¿cómo te llamas?")
+                    .speak(randomMessage)
+                    .reprompt(`${firstPlayerName}, ¿podrías decirme tu canción favorita?`)
+                    .getResponse();
+                    
+            } catch (error) {
+                console.error('Error al guardar jugadores:', error);
+                return handlerInput.responseBuilder
+                    .speak("Hubo un problema al guardar los datos. Vamos a intentarlo de nuevo desde el principio.")
+                    .reprompt("¿Cuántos jugadores sois hoy?")
                     .getResponse();
             }
-            
-            // Todos los nombres registrados
-            attributes.gameState = gameStates.ASKING_FAVORITE_SONGS;
-            attributes.currentPlayer = 1; // Resetear para canciones
-            handlerInput.attributesManager.setSessionAttributes(attributes);
-            
-            return handlerInput.responseBuilder
-                .speak(`¡Perfecto ${playerName}! Todos registrados. ${attributes.players[0].name}, ¿cuál es tu canción favorita?`)
-                .reprompt(`${attributes.players[0].name}, por favor dime tu canción favorita.`)
-                .getResponse();
         } else {
             // Seguir registrando nombres
             attributes.currentPlayer += 1;
             handlerInput.attributesManager.setSessionAttributes(attributes);
             
+            // Mensajes aleatorios para hacerlo más natural
+            const responseMessages = [
+                `Encantado de conocerte, ${playerName}.`,
+                `¡Hola ${playerName}!`,
+                `Un placer, ${playerName}.`,
+                `¡Bienvenido, ${playerName}!`
+            ];
+            
+            const randomGreeting = responseMessages[Math.floor(Math.random() * responseMessages.length)];
+            
             return handlerInput.responseBuilder
-                .speak(`Encantado de conocerte, ${playerName}. Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`)
-                .reprompt(`Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`)
+                .speak(`${randomGreeting} Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`)
+                .reprompt(`Jugador ${attributes.currentPlayer}, ¿podrías decirme tu nombre?`)
                 .getResponse();
         }
     }

@@ -1,6 +1,7 @@
 const Alexa = require('ask-sdk-core');
 const baseHandlers = require('./handlers/baseHandlers');
 const dbHandlers = require('./handlers/dbHandlers');
+const gameHandlers = require('./handlers/gameHandlers');
 
 console.log('Skill iniciada - Versión:', process.env.AWS_LAMBDA_FUNCTION_VERSION);
 
@@ -12,12 +13,12 @@ exports.handler = Alexa.SkillBuilders.custom()
         baseHandlers.LaunchRequestHandler,
         baseHandlers.HelpIntentHandler,
         baseHandlers.PlayerCountIntentHandler,
-        //baseHandlers.SaveColorHandler,
-        //dbHandlers.SaveDataIntentHandler,
         baseHandlers.GetFavoriteSongIntentHandler,
         baseHandlers.FallbackIntentHandler,
-        baseHandlers.GetPlayerNameIntentHandler
-        //dbHandlers.ReadDataIntentHandler
+        baseHandlers.GetPlayerNameIntentHandler,
+        gameHandlers.StartGameIntentHandler,
+        gameHandlers.IndividualQuestionHandler,
+        gameHandlers.TeamQuestionHandler
     )
     .addErrorHandlers(baseHandlers.ErrorHandler)
     .lambda();

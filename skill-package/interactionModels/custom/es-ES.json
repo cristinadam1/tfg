@@ -8,6 +8,9 @@
             "samples": [
               "cancelar",
               "no quiero continuar",
+              "no quiero seguir",
+              "quiero parar",
+              "no me apetece seguir",
               "déjalo aquí",
               "quiero salir"
             ]
@@ -47,12 +50,22 @@
             ],
             "samples": [
               "mi canción favorita es {song}",
+              "mi canción favorita es la de {song}",
               "me gusta {song}",
+              "me gusta la de {song}",
               "escucho mucho {song}",
+              "escucho mucho la de {song}",
               "mi tema preferido es {song}",
+              "mi tema preferido es el de {song}",
               "{song} es mi favorita",
               "me encanta {song}",
-              "de mi época me gustaba {song}"
+              "de mi época me gustaba {song}",
+              "solía escuchar {song}",
+              "antes escuchaba mucho {song}",
+              "cuando era pequeña me gustaba {song}",
+              "cuando era pequeño me gustaba {song}",
+              "en mi época escuchaba {song}",
+              "antes me gustaba {song}"
             ]
           },
           {
@@ -65,9 +78,14 @@
             ],
             "samples": [
               "me llamo {nombre}",
+              "yo soy {nombre}",
+              "yo me llamo {nombre}",
               "soy {nombre}",
               "mi nombre es {nombre}",
               "puedes llamarme {nombre}",
+              "me llaman {nombre}",
+              "a mi me llaman {nombre}",
+              "a mi me dicen {nombre}",
               "{nombre}",
               "me conocen como {nombre}"
             ]
@@ -82,11 +100,15 @@
             ],
             "samples": [
               "somos {count} jugadores",
+              "somos {count}",
+              "estamos {count}",
               "jugamos {count} personas",
               "contamos con {count} participantes",
               "en total somos {count}",
               "{count} jugadores",
-              "participamos {count} personas"
+              "{count} personas",
+              "participamos {count} personas",
+              "participamos {count} jugadores"
             ]
           },
           {
@@ -96,7 +118,8 @@
               "detente",
               "termina",
               "acaba aquí",
-              "puedes parar"
+              "puedes parar",
+              "quiero que pares"
             ]
           },
           {
@@ -106,7 +129,8 @@
               "puedes repetirlo",
               "no sé qué decir",
               "otra vez por favor",
-              "no he captado eso"
+              "no he entendido eso",
+              "no te he escuchado"
             ]
           },
           {
@@ -118,10 +142,32 @@
               }
             ],
             "samples": [
+              "la {answer}",
+              "el {answer}",
+              "en {answer}",
+              "los {answer}",
+              "las {answer}",
               "la respuesta es {answer}",
+              "creo que es el {answer}",
               "creo que es {answer}",
+              "creo que es la {answer}",
+              "creo que son las {answer}",
+              "creo que son los {answer}",
               "diría que {answer}",
-              "decidimos que es {answer}"
+              "diría que la {answer}",
+              "diría que el {answer}",
+              "diría que son las {answer}",
+              "diría que son los {answer}",
+              "decidimos que es {answer}",
+              "decidimos que es la {answer}",
+              "decidimos que es el {answer}",
+              "decidimos que son los {answer}",
+              "decidimos que son las {answer}",
+              "creemos que es la {answer}",
+              "creemos que es el {answer}",
+              "creemos que es {answer}",
+              "creemos que son las {answer}",
+              "creemos que son los {answer}"
             ]
           },
           {
@@ -129,6 +175,8 @@
             "slots": [],
             "samples": [
               "sí vamos",
+              "si",
+              "no",
               "claro que sí",
               "por supuesto",
               "empecemos",
@@ -137,42 +185,14 @@
               "vamos allá",
               "comencemos",
               "ya estoy listo",
+              "ya estoy lista",
               "listo",
+              "lista",
               "vámonos",
               "empieza",
               "ok",
+              "perfecto",
               "de acuerdo"
-            ]
-          },
-          {
-            "name": "AMAZON.NavigateHomeIntent",
-            "samples": []
-          }
-        ],
-        "types": [
-          {
-            "name": "DIRECTION_TYPE",
-            "values": [
-              {
-                "name": {
-                  "value": "izquierda",
-                  "synonyms": [
-                    "izquierda",
-                    "lado izquierdo",
-                    "mi izquierda"
-                  ]
-                }
-              },
-              {
-                "name": {
-                  "value": "derecha",
-                  "synonyms": [
-                    "derecha",
-                    "lado derecho",
-                    "mi derecha"
-                  ]
-                }
-              }
             ]
           }
         ]

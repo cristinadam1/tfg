@@ -8,5 +8,7 @@ module.exports = {
     TEAM_QUESTION: 'TEAM_QUESTION', // Pregunta en equipo
     FINAL_TEAM_QUESTION: 'FINAL_TEAM_QUESTION', // Pregunta final
     SHOW_RANKING: 'SHOW_RANKING', // Mostrando resultados
+    ASKING_FOR_NEW_GAME: 'ASKING_FOR_NEW_GAME',
+    ASKING_ABOUT_PLAYERS: 'ASKING_ABOUT_PLAYERS',
     ENDED: 'ENDED' // Juego terminado
   };

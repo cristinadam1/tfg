@@ -98,19 +98,39 @@ const GetFavoriteSongIntentHandler = {
   
     async handle(handlerInput) {
         const songName = Alexa.getSlotValue(handlerInput.requestEnvelope, 'song');
-        const { attributesManager } = handlerInput;
+        const { attributesManager, requestEnvelope } = handlerInput;
         const attributes = attributesManager.getSessionAttributes();
         
         if (!songName) {
             const currentPlayerName = attributes.players[attributes.currentPlayer].name;
             return handlerInput.responseBuilder
-                .speak("No entendí el nombre de la canción. ¿Puedes repetirlo?")
+                .speak("No he entendido el nombre de la canción. ¿Puedes repetirlo?")
                 .reprompt(`${currentPlayerName}, ¿cuál es tu canción favorita?`)
                 .getResponse();
         }
         
         // Guardar la canción favorita del jugador
         attributes.players[attributes.currentPlayer].favoriteSong = songName;
+        
+        // Guardar en DynamoDB
+        try {
+            const success = await db.saveGameSession(
+                requestEnvelope.session.sessionId, 
+                {
+                    playerCount: attributes.playerCount,
+                    currentPlayer: attributes.currentPlayer,
+                    gameState: attributes.gameState,
+                    players: attributes.players,
+                    createdAt: attributes.createdAt || new Date().toISOString()
+                }
+            );
+            
+            if (!success) {
+                console.error('Error al guardar canción favorita en DynamoDB');
+            }
+        } catch (error) {
+            console.error('Error en saveGameSession:', error);
+        }
         
         // Obtener URL del audio
         const url = await db.getSongUrl(songName);
@@ -125,11 +145,27 @@ const GetFavoriteSongIntentHandler = {
             attributes.currentPlayer = nextPlayer.index;
             handlerInput.attributesManager.setSessionAttributes(attributes);
             
+            // Guardar cambio de jugador actual en DynamoDB
+            try {
+                await db.saveGameSession(
+                    requestEnvelope.session.sessionId,
+                    {
+                        playerCount: attributes.playerCount,
+                        currentPlayer: attributes.currentPlayer,
+                        players: attributes.players,
+                        gameState: attributes.gameState,
+                        createdAt: attributes.createdAt
+                    }
+                );
+            } catch (error) {
+                console.error('Error al actualizar jugador actual:', error);
+            }
+            
             let speakOutput;
             if (url) {
                 speakOutput = `<speak>¡Buena elección! Aquí tienes un fragmento de ${songName}. <audio src="${url}"/> ${nextPlayer.name}, ¿y cuál es tu canción favorita?</speak>`;
             } else {
-                speakOutput = `No encontré la canción ${songName} en mi base de datos. ${nextPlayer.name}, ¿cuál es tu canción favorita?`;
+                speakOutput = `No conozco la cancion ${songName} pero seguro que me encantaría. Para el proximo día me la aprenderé. ${nextPlayer.name}, ¿cuál es tu canción favorita?`;
             }
             
             return handlerInput.responseBuilder
@@ -141,11 +177,27 @@ const GetFavoriteSongIntentHandler = {
             attributes.gameState = gameStates.GAME_STARTED;
             handlerInput.attributesManager.setSessionAttributes(attributes);
             
+            // Guardar estado final en DynamoDB
+            try {
+                await db.saveGameSession(
+                    requestEnvelope.session.sessionId,
+                    {
+                        playerCount: attributes.playerCount,
+                        gameState: attributes.gameState,
+                        players: attributes.players,
+                        currentPlayer: attributes.currentPlayer,
+                        createdAt: attributes.createdAt
+                    }
+                );
+            } catch (error) {
+                console.error('Error al guardar estado final:', error);
+            }
+            
             let speakOutput;
             if (url) {
                 speakOutput = `<speak>¡Buena elección! Aquí tienes un fragmento de ${songName}. <audio src="${url}"/> ¡Y con esto ya tenemos todas vuestras canciones favoritas! ¿Listos para empezar el juego?</speak>`;
             } else {
-                speakOutput = `No encontré la canción ${songName} en mi base de datos. Pero no importa, ya tenemos todas vuestras canciones favoritas. ¿Listos para empezar el juego?`;
+                speakOutput = `No conozco la cancion ${songName}, pero seguro que esta muy chula. Para el proximo día me la aprenderé ¿Listos para empezar el juego?`;
             }
             
             return handlerInput.responseBuilder
@@ -155,6 +207,7 @@ const GetFavoriteSongIntentHandler = {
         }
     }
 };
+
 
 const PlayerCountIntentHandler = {
     canHandle(handlerInput) {
@@ -178,7 +231,7 @@ const PlayerCountIntentHandler = {
       }
     },
   
-    handle(handlerInput) {
+    async handle(handlerInput) {
       console.log('PlayerCountIntentHandler handle iniciado');
       try {
         const playerCount = parseInt(Alexa.getSlotValue(handlerInput.requestEnvelope, 'count'));
@@ -210,6 +263,18 @@ const PlayerCountIntentHandler = {
         attributes.gameState = gameStates.REGISTERING_PLAYER_NAMES;
         attributesManager.setSessionAttributes(attributes);
         
+        try {
+            await db.saveGameSession(requestEnvelope.session.sessionId, {
+                playerCount: attributes.playerCount,
+                currentPlayer: 1,
+                players: [],
+                gameState: gameStates.REGISTERING_PLAYER_NAMES,
+                createdAt: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error('Error al guardar inicialmente:', error);
+        }
+
         console.log('Atributos actualizados:', attributes);
         
         return handlerInput.responseBuilder
@@ -267,6 +332,7 @@ const PlayerCountIntentHandler = {
             try {
                 // Guardar en DynamoDB
                 const success = await db.saveGameSession(requestEnvelope.session.sessionId, {
+                    playerCount: attributes.playerCount,
                     currentPlayer: attributes.currentPlayer,
                     gameState: attributes.gameState,
                     players: attributes.players,

@@ -12,15 +12,18 @@ exports.handler = Alexa.SkillBuilders.custom()
     .addRequestHandlers(
         baseHandlers.LaunchRequestHandler,
         baseHandlers.HelpIntentHandler,
-        baseHandlers.PlayerCountIntentHandler,
-        baseHandlers.GetFavoriteSongIntentHandler,
         baseHandlers.FallbackIntentHandler,
+        baseHandlers.PlayerCountIntentHandler,
         baseHandlers.GetPlayerNameIntentHandler,
+        baseHandlers.GetFavoriteSongIntentHandler,
         gameHandlers.StartGameIntentHandler,
         gameHandlers.IndividualQuestionHandler,
         gameHandlers.TeamQuestionHandler,
         gameHandlers.FinalTeamQuestionHandler,
-        gameHandlers.ShowRankingHandler
+        gameHandlers.ShowRankingHandler,
+        gameHandlers.NewGameDecisionHandler,
+        gameHandlers.SamePlayersHandler,       
+        gameHandlers.SessionEndedRequestHandler  
     )
     .addErrorHandlers(baseHandlers.ErrorHandler)
     .lambda();

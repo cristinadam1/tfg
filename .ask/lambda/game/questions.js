@@ -137,7 +137,7 @@ module.exports = {
     }
   ],
 
-  OBJETO_ANTIGUO: [
+  OBJETOANTIGUO: [
     {
       question: "¿Cómo se llama el aparato que se usaba para escuchar música con cintas?",
       answer: "walkman",

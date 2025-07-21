@@ -3,6 +3,7 @@ const questions = require('../game/questions');
 const voiceRoles = require('../utils/voiceRoles');
 const gameStates = require('../game/gameStates');
 const { sendProgressiveResponse } = require('ask-sdk-core');
+const db = require('../db/dynamodb');
 
 // Helper functions
 const normalizeString = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
@@ -27,7 +28,8 @@ const StartGameIntentHandler = {
             const attributes = handlerInput.attributesManager.getSessionAttributes();
             return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
                    Alexa.getIntentName(handlerInput.requestEnvelope) === 'StartGameIntent' &&
-                   attributes.gameState === gameStates.GAME_STARTED;
+                   (attributes.gameState === gameStates.GAME_STARTED || 
+                    attributes.gameState === gameStates.ASKING_FAVORITE_SONGS);
         } catch (error) {
             console.error('Error in StartGameIntentHandler canHandle:', error);
             return false;
@@ -104,11 +106,11 @@ const IndividualQuestionHandler = {
             verifySessionAttributes(attributes);
             
             if (intentName === 'AnswerIntent') {
-                return handleAnswer(handlerInput, voiceConfig);
+                return await handleAnswer(handlerInput, voiceConfig);
             }
             
             if (intentName === 'AMAZON.YesIntent') {
-                return askNextQuestion(handlerInput, voiceConfig);
+                return await askNextQuestion(handlerInput, voiceConfig);
             }
             
             return handlerInput.responseBuilder
@@ -173,6 +175,18 @@ const TeamQuestionHandler = {
                 if (isCorrect) {
                     attributes.players[attributes.currentPlayerIndex].score += 1;
                     attributes.players[teammateIndex].score += 1;
+
+                    try {
+                        await db.saveGameSession(requestEnvelope.session.sessionId, {
+                            playerCount: attributes.playerCount,
+                            players: attributes.players,
+                            gameState: attributes.gameState,
+                            currentPlayerIndex: attributes.currentPlayerIndex,
+                            createdAt: attributes.createdAt
+                        });
+                    } catch (error) {
+                        console.error('Error al guardar puntuación grupal:', error);
+                    }
                 }
                 
                 attributes.currentPlayerIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;
@@ -228,6 +242,17 @@ const FinalTeamQuestionHandler = {
                     attributes.players.forEach(player => {
                         player.score += 2; // Doble puntos para la pregunta final
                     });
+
+                    try {
+                        await db.saveGameSession(requestEnvelope.session.sessionId, {
+                            playerCount: attributes.playerCount,
+                            players: attributes.players,
+                            gameState: gameStates.SHOW_RANKING,
+                            createdAt: attributes.createdAt
+                        });
+                    } catch (error) {
+                        console.error('Error al guardar puntuación final:', error);
+                    }
                 }
 
                 // Preparar para mostrar ranking
@@ -261,53 +286,48 @@ const ShowRankingHandler = {
     canHandle(handlerInput) {
         const attributes = handlerInput.attributesManager.getSessionAttributes();
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
-               (Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.YesIntent' ||
-                Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.NoIntent') &&
                attributes.gameState === gameStates.SHOW_RANKING;
     },
 
-    handle(handlerInput) {
+    async handle(handlerInput) {
         try {
             const { attributesManager } = handlerInput;
             const attributes = attributesManager.getSessionAttributes();
             const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
 
-            // Ordenar jugadores por puntuación (de mayor a menor)
+            // Mostrar ranking de forma positiva
             const sortedPlayers = [...attributes.players].sort((a, b) => b.score - a.score);
-
-            // Crear mensaje de ranking positivo
-            let rankingMessage = "Los que más recuerdos han evocado hoy son: ";
             
-            sortedPlayers.forEach((player, index) => {
-                if (index === sortedPlayers.length - 1 && sortedPlayers.length > 1) {
-                    rankingMessage += `y ${player.name} `;
+            let rankingMessage = `<voice name="${voiceConfig.voice}">¡Todos habéis jugado genial! `;
+            
+            if (sortedPlayers.length === 1) {
+                rankingMessage += `¡${sortedPlayers[0].name}, has conseguido ${sortedPlayers[0].score} puntos! `;
+            } else {
+                // Mensaje especial para empates
+                const topScore = sortedPlayers[0].score;
+                const topPlayers = sortedPlayers.filter(p => p.score === topScore);
+                
+                if (topPlayers.length > 1) {
+                    const names = topPlayers.map(p => p.name).join(' y ');
+                    rankingMessage += `¡${names} habéis empatado en primer lugar con ${topScore} puntos! `;
                 } else {
-                    rankingMessage += `${player.name} `;
+                    rankingMessage += `¡${sortedPlayers[0].name} lidera con ${sortedPlayers[0].score} puntos! `;
                 }
                 
-                // Añadir comentario positivo basado en la posición
-                if (index === 0) {
-                    rankingMessage += `(que nos ha traído muchos recuerdos), `;
-                } else {
-                    rankingMessage += `(que también ha compartido grandes momentos), `;
-                }
-            });
-
-            // Eliminar la última coma y espacio
-            rankingMessage = rankingMessage.replace(/, $/, ". ");
-
-            // Mensaje final positivo
-            rankingMessage += "¡Gracias por compartir estos recuerdos conmigo! ¿Queréis jugar otra vez?";
-
-            // Actualizar estado
-            attributes.gameState = gameStates.ENDED;
+                // Mencionar a todos los jugadores positivamente
+                rankingMessage += `Pero todos lo habéis hecho fenomenal: `;
+                rankingMessage += sortedPlayers.map(p => `${p.name} con ${p.score} puntos`).join(', ') + '. ';
+            }
+            
+            rankingMessage += `¿Queréis jugar otra partida?</voice>`;
+            
+            // Actualizar estado para manejar la respuesta
+            attributes.gameState = gameStates.ASKING_FOR_NEW_GAME;
             attributesManager.setSessionAttributes(attributes);
-
+            
             return handlerInput.responseBuilder
-                .speak(`<voice name="${voiceConfig.voice}">${rankingMessage}</voice>`)
-                .withSimpleCard("Resultados finales", 
-                    sortedPlayers.map(p => `${p.name}: ${p.score} recuerdos`).join('\n'))
-                .withShouldEndSession(false)
+                .speak(rankingMessage)
+                .reprompt("¿Queréis jugar otra partida?")
                 .getResponse();
         } catch (error) {
             console.error('Error in ShowRankingHandler:', error);
@@ -319,9 +339,195 @@ const ShowRankingHandler = {
     }
 };
 
+const NewGameDecisionHandler = {
+    canHandle(handlerInput) {
+        const attributes = handlerInput.attributesManager.getSessionAttributes();
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+               (Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.YesIntent' ||
+                Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.NoIntent') &&
+               attributes.gameState === gameStates.ASKING_FOR_NEW_GAME;
+    },
+
+    async handle(handlerInput) {
+        try {
+            const { attributesManager, requestEnvelope } = handlerInput;
+            const attributes = attributesManager.getSessionAttributes();
+            const intentName = Alexa.getIntentName(requestEnvelope);
+            const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
+
+            if (intentName === 'AMAZON.NoIntent') {
+                // Despedida simpática
+                const farewellMessages = [
+                    "¡Ha sido un placer jugar con vosotros! Espero que hayáis recordado buenos momentos.",
+                    "¡Hasta la próxima! Seguro que la próxima vez recordáis aún más canciones.",
+                    "¡Gracias por jugar! No olvidéis seguir creando buenos recuerdos.",
+                    "¡Adiós! Espero volver a veros pronto para más diversión musical."
+                ];
+                
+                const randomMessage = farewellMessages[Math.floor(Math.random() * farewellMessages.length)];
+                attributes.gameState = gameStates.ENDED;
+                try {
+                    await db.saveGameSession(requestEnvelope.session.sessionId, {
+                        playerCount: attributes.playerCount,
+                        players: attributes.players,
+                        gameState: attributes.gameState,
+                        currentPlayerIndex: attributes.currentPlayerIndex,
+                        createdAt: attributes.createdAt
+                    });
+                } catch (error) {
+                    console.error('Error al guardar puntuación grupal:', error);
+                }
+                
+                return handlerInput.responseBuilder
+                    .speak(`<voice name="${voiceConfig.voice}">${randomMessage}</voice>`)
+                    .withShouldEndSession(true)
+                    .getResponse();
+            }
+            
+            if (intentName === 'AMAZON.YesIntent') {
+                // Preguntar si son los mismos jugadores
+                attributes.gameState = gameStates.ASKING_ABOUT_PLAYERS;
+                attributesManager.setSessionAttributes(attributes);
+                
+                return handlerInput.responseBuilder
+                    .speak(`<voice name="${voiceConfig.voice}">¡Genial! ¿Sois los mismos jugadores?</voice>`)
+                    .reprompt("¿Son los mismos jugadores?")
+                    .getResponse();
+            }
+            
+            return handlerInput.responseBuilder
+                .speak("No he entendido tu respuesta. ¿Queréis jugar otra vez?")
+                .reprompt("¿Queréis jugar otra vez?")
+                .getResponse();
+        } catch (error) {
+            console.error('Error in NewGameDecisionHandler:', error);
+            return handlerInput.responseBuilder
+                .speak('Vamos a empezar una nueva partida. ¿Cuántos jugadores sois hoy?')
+                .reprompt("Por favor, dime cuántos jugadores van a jugar hoy.")
+                .getResponse();
+        }
+    }
+};
+
+const SamePlayersHandler = {
+    canHandle(handlerInput) {
+        const attributes = handlerInput.attributesManager.getSessionAttributes();
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+               (Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.YesIntent' ||
+                Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.NoIntent') &&
+               attributes.gameState === gameStates.ASKING_ABOUT_PLAYERS;
+    },
+
+    async handle(handlerInput) {
+        try {
+            const { attributesManager, requestEnvelope } = handlerInput;
+            const attributes = attributesManager.getSessionAttributes();
+            const intentName = Alexa.getIntentName(requestEnvelope);
+            const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
+
+            if (intentName === 'AMAZON.YesIntent') {
+                // Reiniciar juego con mismos jugadores
+                attributes.gameState = gameStates.GAME_STARTED;
+                attributes.questionCounter = 0;
+                attributes.questionsAsked = [];
+                attributes.questionsPerPlayer = {};
+                attributes.players.forEach(player => {
+                    player.score = 0;
+                });
+                attributes.currentPlayerIndex = 0;
+                attributes.currentPlayerName = attributes.players[0].name;
+
+                try {
+                    await db.saveGameSession(requestEnvelope.session.sessionId, {
+                        playerCount: attributes.playerCount,
+                        players: attributes.players,
+                        gameState: attributes.gameState,
+                        currentPlayerIndex: 0,
+                        createdAt: new Date().toISOString()
+                    });
+                } catch (error) {
+                    console.error('Error al reiniciar puntajes:', error);
+                }
+                
+                attributesManager.setSessionAttributes(attributes);
+                
+                return handlerInput.responseBuilder
+                    .speak(`<voice name="${voiceConfig.voice}">Perfecto, misma pandilla. ¡Vamos a recordar más momentos! ¿Preparados?</voice>`)
+                    .reprompt("¿Listos para empezar la nueva partida?")
+                    .getResponse();
+            }
+            
+            if (intentName === 'AMAZON.NoIntent') {
+                // Empezar desde cero con nuevos jugadores
+                attributes.gameState = gameStates.REGISTERING_PLAYER_COUNT;
+                attributes.players = [];
+                attributes.currentPlayer = 1;
+                
+                attributesManager.setSessionAttributes(attributes);
+                
+                return handlerInput.responseBuilder
+                    .speak(`<voice name="${voiceConfig.voice}">Entendido. Vamos a empezar de cero. ¿Cuántos jugadores sois?</voice>`)
+                    .reprompt("Por favor, dime cuántos jugadores van a jugar hoy.")
+                    .getResponse();
+            }
+            
+            return handlerInput.responseBuilder
+                .speak("No he entendido tu respuesta. ¿Sois los mismos jugadores?")
+                .reprompt("¿Son los mismos jugadores o hay nuevos participantes?")
+                .getResponse();
+        } catch (error) {
+            console.error('Error in SamePlayersHandler:', error);
+            return handlerInput.responseBuilder
+                .speak('Vamos a empezar una nueva partida. ¿Cuántos jugadores sois hoy?')
+                .reprompt("Por favor, dime cuántos jugadores van a jugar hoy.")
+                .getResponse();
+        }
+    }
+};
+
+const SessionEndedRequestHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'SessionEndedRequest';
+    },
+    async handle(handlerInput) {
+        const { requestEnvelope } = handlerInput;
+        const { reason } = requestEnvelope.request;
+        const { attributesManager } = handlerInput;
+        const attributes = attributesManager.getSessionAttributes();
+        attributes.gameState = gameStates.ENDED;
+        
+        console.log(`Sesión terminada. Razón: ${reason}`);
+        
+        // Guardar estado actual si la sesión termina inesperadamente
+        if (reason === 'ERROR' || reason === 'EXCEEDED_MAX_REPROMPTS') {
+            try {
+                console.log('Intentando guardar estado de sesión antes de terminar...');
+                
+                if (attributes.players && attributes.players.length > 0) {
+                    await db.saveGameSession(requestEnvelope.session.sessionId, {
+                        playerCount: attributes.playerCount,
+                        currentPlayer: attributes.currentPlayer || 0,
+                        gameState: attributes.gameState || gameStates.START,
+                        players: attributes.players,
+                        createdAt: new Date().toISOString(),
+                        endedAt: new Date().toISOString(),
+                        endReason: reason
+                    });
+                    console.log('Estado de sesión guardado antes de terminar');
+                }
+            } catch (error) {
+                console.error('Error al guardar estado de sesión terminada:', error);
+            }
+        }
+        
+        // No se puede enviar respuesta con SessionEndedRequest
+        return handlerInput.responseBuilder.getResponse();
+    }
+};
+
 
 // Helper functions implementations
-function handleAnswer(handlerInput, voiceConfig) {
+async function handleAnswer(handlerInput, voiceConfig) {
     try {
         const { attributesManager, requestEnvelope } = handlerInput;
         const attributes = attributesManager.getSessionAttributes();
@@ -334,6 +540,18 @@ function handleAnswer(handlerInput, voiceConfig) {
         
         if (isCorrect) {
             attributes.players[attributes.currentPlayerIndex].score += 1;
+        
+            try {
+                await db.saveGameSession(requestEnvelope.session.sessionId, {
+                    playerCount: attributes.playerCount,
+                    players: attributes.players,
+                    currentPlayerIndex: attributes.currentPlayerIndex,
+                    gameState: attributes.gameState,
+                    createdAt: attributes.createdAt
+                });
+            } catch (error) {
+                console.error('Error al guardar puntuación:', error);
+            }
         }
         
         attributes.currentPlayerIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;
@@ -356,7 +574,7 @@ function handleAnswer(handlerInput, voiceConfig) {
     }
 }
 
-function askNextQuestion(handlerInput, voiceConfig) {
+async function askNextQuestion(handlerInput, voiceConfig) {
     try {
         const { attributesManager } = handlerInput;
         const attributes = attributesManager.getSessionAttributes();
@@ -500,5 +718,8 @@ module.exports = {
     IndividualQuestionHandler,
     TeamQuestionHandler,
     FinalTeamQuestionHandler,
-    ShowRankingHandler
+    ShowRankingHandler,
+    SamePlayersHandler,
+    NewGameDecisionHandler,
+    SessionEndedRequestHandler
 };

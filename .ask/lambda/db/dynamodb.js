@@ -10,18 +10,52 @@ module.exports = {
             TableName: PLAYERS_TABLE,
             Item: {
                 sessionId,
-                currentPlayer: gameData.currentPlayer,
-                gameState: gameData.gameState,
-                players: gameData.players,
-                createdAt: new Date().toISOString()
+                playerCount: gameData.playerCount || 0,
+                currentPlayer: gameData.currentPlayer || 0,
+                gameState: gameData.gameState || 'START',
+                players: gameData.players.map(player => ({
+                    name: player.name,
+                    score: player.score || 0,
+                    favoriteSong: player.favoriteSong || null
+                })),
+                createdAt: gameData.createdAt || new Date().toISOString(),
+                updatedAt: new Date().toISOString()
             }
         };
 
         try {
+            console.log('Guardando sesión en DynamoDB:', params.Item);
             await dynamodb.put(params).promise();
             return true;
         } catch (error) {
             console.error('Error al guardar sesión:', error);
+            return false;
+        }
+    },
+
+    async updatePlayerData(sessionId, updates) {
+        const updateExpression = [];
+        const expressionValues = {};
+        
+        Object.keys(updates).forEach(key => {
+            updateExpression.push(`${key} = :${key}`);
+            expressionValues[`:${key}`] = updates[key];
+        });
+        
+        const params = {
+            TableName: PLAYERS_TABLE,
+            Key: { sessionId },
+            UpdateExpression: 'SET ' + updateExpression.join(', '),
+            ExpressionAttributeValues: expressionValues,
+            ReturnValues: 'UPDATED_NEW'
+        };
+        
+        try {
+            console.log('Actualizando jugador en DynamoDB:', params);
+            await dynamodb.update(params).promise();
+            return true;
+        } catch (error) {
+            console.error('Error al actualizar jugador:', error);
             return false;
         }
     },

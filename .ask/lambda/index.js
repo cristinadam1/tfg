@@ -18,7 +18,9 @@ exports.handler = Alexa.SkillBuilders.custom()
         baseHandlers.GetPlayerNameIntentHandler,
         gameHandlers.StartGameIntentHandler,
         gameHandlers.IndividualQuestionHandler,
-        gameHandlers.TeamQuestionHandler
+        gameHandlers.TeamQuestionHandler,
+        gameHandlers.FinalTeamQuestionHandler,
+        gameHandlers.ShowRankingHandler
     )
     .addErrorHandlers(baseHandlers.ErrorHandler)
     .lambda();

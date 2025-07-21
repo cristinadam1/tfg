@@ -202,6 +202,123 @@ const TeamQuestionHandler = {
         }
     }
 };
+const FinalTeamQuestionHandler = {
+    canHandle(handlerInput) {
+        const attributes = handlerInput.attributesManager.getSessionAttributes();
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+               attributes.gameState === gameStates.FINAL_TEAM_QUESTION;
+    },
+
+    async handle(handlerInput) {
+        try {
+            const { attributesManager, requestEnvelope } = handlerInput;
+            const attributes = attributesManager.getSessionAttributes();
+            const intentName = Alexa.getIntentName(requestEnvelope);
+            const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
+            
+            verifySessionAttributes(attributes);
+
+            if (intentName === 'AnswerIntent') {
+                const userAnswer = Alexa.getSlotValue(requestEnvelope, 'answer');
+                const possibleAnswers = attributes.finalQuestion.answers || [attributes.finalQuestion.answer];
+                const isCorrect = possibleAnswers.some(ans => normalizeString(userAnswer).includes(normalizeString(ans)));
+                
+                // Todos los jugadores ganan puntos en la pregunta final
+                if (isCorrect) {
+                    attributes.players.forEach(player => {
+                        player.score += 2; // Doble puntos para la pregunta final
+                    });
+                }
+
+                // Preparar para mostrar ranking
+                attributes.gameState = gameStates.SHOW_RANKING;
+                attributesManager.setSessionAttributes(attributes);
+
+                const feedback = isCorrect 
+                    ? "¡Respuesta correcta! Todos ganáis puntos extra. " 
+                    : `Casi. La respuesta correcta era ${possibleAnswers[0]}. `;
+                
+                return handlerInput.responseBuilder
+                    .speak(feedback + "Vamos a ver los recuerdos que habéis evocado hoy.")
+                    .withShouldEndSession(false)
+                    .getResponse();
+            }
+            
+            return handlerInput.responseBuilder
+                .speak("Por favor, decidme vuestra respuesta conjunta.")
+                .reprompt("¿Cuál es vuestra respuesta como equipo?")
+                .getResponse();
+        } catch (error) {
+            console.error('Error in FinalTeamQuestionHandler:', error);
+            return handlerInput.responseBuilder
+                .speak('Ocurrió un error en la pregunta final. Vamos a ver los resultados.')
+                .getResponse();
+        }
+    }
+};
+
+const ShowRankingHandler = {
+    canHandle(handlerInput) {
+        const attributes = handlerInput.attributesManager.getSessionAttributes();
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+               (Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.YesIntent' ||
+                Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.NoIntent') &&
+               attributes.gameState === gameStates.SHOW_RANKING;
+    },
+
+    handle(handlerInput) {
+        try {
+            const { attributesManager } = handlerInput;
+            const attributes = attributesManager.getSessionAttributes();
+            const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
+
+            // Ordenar jugadores por puntuación (de mayor a menor)
+            const sortedPlayers = [...attributes.players].sort((a, b) => b.score - a.score);
+
+            // Crear mensaje de ranking positivo
+            let rankingMessage = "Los que más recuerdos han evocado hoy son: ";
+            
+            sortedPlayers.forEach((player, index) => {
+                if (index === sortedPlayers.length - 1 && sortedPlayers.length > 1) {
+                    rankingMessage += `y ${player.name} `;
+                } else {
+                    rankingMessage += `${player.name} `;
+                }
+                
+                // Añadir comentario positivo basado en la posición
+                if (index === 0) {
+                    rankingMessage += `(que nos ha traído muchos recuerdos), `;
+                } else {
+                    rankingMessage += `(que también ha compartido grandes momentos), `;
+                }
+            });
+
+            // Eliminar la última coma y espacio
+            rankingMessage = rankingMessage.replace(/, $/, ". ");
+
+            // Mensaje final positivo
+            rankingMessage += "¡Gracias por compartir estos recuerdos conmigo! ¿Queréis jugar otra vez?";
+
+            // Actualizar estado
+            attributes.gameState = gameStates.ENDED;
+            attributesManager.setSessionAttributes(attributes);
+
+            return handlerInput.responseBuilder
+                .speak(`<voice name="${voiceConfig.voice}">${rankingMessage}</voice>`)
+                .withSimpleCard("Resultados finales", 
+                    sortedPlayers.map(p => `${p.name}: ${p.score} recuerdos`).join('\n'))
+                .withShouldEndSession(false)
+                .getResponse();
+        } catch (error) {
+            console.error('Error in ShowRankingHandler:', error);
+            return handlerInput.responseBuilder
+                .speak('Gracias por jugar a Regreso al Pasado. ¡Hasta la próxima!')
+                .withShouldEndSession(true)
+                .getResponse();
+        }
+    }
+};
+
 
 // Helper functions implementations
 function handleAnswer(handlerInput, voiceConfig) {
@@ -246,6 +363,25 @@ function askNextQuestion(handlerInput, voiceConfig) {
         
         verifySessionAttributes(attributes);
         
+        // Contador de preguntas por jugador
+        if (!attributes.questionsPerPlayer) {
+            attributes.questionsPerPlayer = {};
+            attributes.players.forEach(player => {
+                attributes.questionsPerPlayer[player.name] = 0;
+            });
+        }
+        
+        // Incrementar contador para el jugador actual
+        attributes.questionsPerPlayer[attributes.currentPlayerName] = 
+            (attributes.questionsPerPlayer[attributes.currentPlayerName] || 0) + 1;
+        
+        // Verificar si es momento de la pregunta final
+        const minQuestions = Math.min(...Object.values(attributes.questionsPerPlayer));
+        if (minQuestions >= 2) {
+            return startFinalTeamQuestion(handlerInput, voiceConfig);
+        }
+        
+        // Resto de la lógica normal para preguntas individuales/equipo
         let questionsLeft = questions[attributes.currentCategory].filter(q => 
             !attributes.questionsAsked.includes(q.question)
         );
@@ -254,7 +390,7 @@ function askNextQuestion(handlerInput, voiceConfig) {
             const remainingCategories = Object.keys(questions).filter(cat => cat !== attributes.currentCategory);
             
             if (remainingCategories.length === 0) {
-                return endGame(handlerInput);
+                return startFinalTeamQuestion(handlerInput, voiceConfig);
             }
             
             attributes.currentCategory = remainingCategories[Math.floor(Math.random() * remainingCategories.length)];
@@ -325,23 +461,36 @@ function startTeamQuestion(handlerInput, voiceConfig) {
     }
 }
 
-function endGame(handlerInput) {
+function startFinalTeamQuestion(handlerInput, voiceConfig) {
     try {
         const { attributesManager } = handlerInput;
         const attributes = attributesManager.getSessionAttributes();
         
         verifySessionAttributes(attributes);
         
-        const scores = attributes.players.map(p => `${p.name}: ${p.score} puntos`).join(', ');
+        // Seleccionar pregunta final especial
+        const finalQuestions = questions.FINAL || [
+            {
+                question: "Como equipo, ¿cuál es el recuerdo más emotivo que habéis compartido hoy?",
+                answers: ["recuerdo emotivo", "momento especial", "buen recuerdo"]
+            }
+        ];
+        
+        const finalQuestion = finalQuestions[Math.floor(Math.random() * finalQuestions.length)];
+        attributes.finalQuestion = finalQuestion;
+        attributes.gameState = gameStates.FINAL_TEAM_QUESTION;
+        attributesManager.setSessionAttributes(attributes);
+        
+        const speakOutput = `<voice name="${voiceConfig.voice}">¡Pregunta final grupal! ${finalQuestion.question} Trabajad juntos para dar la mejor respuesta.</voice>`;
+        
         return handlerInput.responseBuilder
-            .speak(`El juego ha terminado. Puntuaciones finales: ${scores}. ¡Gracias por jugar!`)
-            .withShouldEndSession(true)
+            .speak(speakOutput)
+            .reprompt("¿Cuál es vuestra respuesta como equipo?")
             .getResponse();
     } catch (error) {
-        console.error('Error in endGame:', error);
+        console.error('Error in startFinalTeamQuestion:', error);
         return handlerInput.responseBuilder
-            .speak('El juego ha terminado. ¡Gracias por jugar!')
-            .withShouldEndSession(true)
+            .speak('Vamos a ver los recuerdos que habéis evocado hoy.')
             .getResponse();
     }
 }
@@ -349,5 +498,7 @@ function endGame(handlerInput) {
 module.exports = {
     StartGameIntentHandler,
     IndividualQuestionHandler,
-    TeamQuestionHandler
+    TeamQuestionHandler,
+    FinalTeamQuestionHandler,
+    ShowRankingHandler
 };

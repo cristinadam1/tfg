@@ -9,7 +9,7 @@ const db = require('../db/dynamodb');
 const normalizeString = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
 const getRandomFeedback = (isCorrect, correctAnswer) => {
     if (isCorrect) {
-        const positiveFeedback = ["¡Excelente!", "¡Muy bien!", "¡Correcto!", "¡Lo sabías!", "¡Perfecto!"];
+        const positiveFeedback = ["¡Excelente!", "¡Muy bien!", "¡Correcto!", "¡Qué bien se te da esto!", "¡Perfecto!"];
         return positiveFeedback[Math.floor(Math.random() * positiveFeedback.length)];
     }
     return `Casi. La respuesta correcta era ${correctAnswer}.`;
@@ -65,7 +65,7 @@ const StartGameIntentHandler = {
             const speakOutput = `<voice name="${voiceConfig.voice}">` +
                 `${voiceConfig.greeting || '¡Vamos a empezar!'} ` +
                 `La primera pregunta es para ${attributes.currentPlayerName}. ` +
-                `Categoría: ${randomCategory}. ${question.question}</voice>`;
+                `${question.question}</voice>`;
             
             return handlerInput.responseBuilder
                 .speak(speakOutput)
@@ -74,7 +74,7 @@ const StartGameIntentHandler = {
         } catch (error) {
             console.error('Error in StartGameIntentHandler handle:', error);
             return handlerInput.responseBuilder
-                .speak('Hubo un problema al iniciar el juego. Por favor, inténtalo de nuevo.')
+                .speak('Ha habido un problema al iniciar el juego. Por favor, inténtalo de nuevo.')
                 .getResponse();
         }
     }
@@ -114,13 +114,13 @@ const IndividualQuestionHandler = {
             }
             
             return handlerInput.responseBuilder
-                .speak("No entendí tu respuesta. ¿Puedes repetirla?")
+                .speak("Perdona, no te he entendido bien. ¿Puedes repetirlo?")
                 .reprompt("¿Cuál es tu respuesta?")
                 .getResponse();
         } catch (error) {
             console.error('Error in IndividualQuestionHandler handle:', error);
             return handlerInput.responseBuilder
-                .speak('Ocurrió un error al procesar tu respuesta. Volviendo al menú principal.')
+                .speak('Ha habido un error al procesar tu respuesta. Volviendo al menú principal.')
                 .getResponse();
         }
     }
@@ -162,8 +162,8 @@ const TeamQuestionHandler = {
             
             if (intentName === 'AMAZON.YesIntent') {
                 return handlerInput.responseBuilder
-                    .speak(`<voice name="${voiceConfig.voice}">Perfecto. Trabajen juntos con ${teammateName}. Cuando estén listos, díganme su respuesta. La pregunta es: ${attributes.currentQuestion.question}</voice>`)
-                    .reprompt("¿Cuál es su respuesta en equipo?")
+                    .speak(`<voice name="${voiceConfig.voice}">Perfecto. Trabajad juntos con ${teammateName}. Cuando estéis listos, decidme la respuesta. La pregunta es: ${attributes.currentQuestion.question}</voice>`)
+                    .reprompt("¿Cuál es vuestra respuesta en equipo?")
                     .getResponse();
             }
             
@@ -211,7 +211,7 @@ const TeamQuestionHandler = {
         } catch (error) {
             console.error('Error in TeamQuestionHandler handle:', error);
             return handlerInput.responseBuilder
-                .speak('Ocurrió un error en la pregunta grupal. Volviendo a preguntas individuales.')
+                .speak('Ha habido un error en la pregunta grupal. Volviendo a preguntas individuales.')
                 .getResponse();
         }
     }
@@ -276,7 +276,7 @@ const FinalTeamQuestionHandler = {
         } catch (error) {
             console.error('Error in FinalTeamQuestionHandler:', error);
             return handlerInput.responseBuilder
-                .speak('Ocurrió un error en la pregunta final. Vamos a ver los resultados.')
+                .speak('Ha habido un error en la pregunta final. Vamos a ver los resultados.')
                 .getResponse();
         }
     }
@@ -359,9 +359,9 @@ const NewGameDecisionHandler = {
                 // Despedida simpática
                 const farewellMessages = [
                     "¡Ha sido un placer jugar con vosotros! Espero que hayáis recordado buenos momentos.",
-                    "¡Hasta la próxima! Seguro que la próxima vez recordáis aún más canciones.",
+                    "¡Hasta la próxima! Me ha encantado jugar con vosotros.",
                     "¡Gracias por jugar! No olvidéis seguir creando buenos recuerdos.",
-                    "¡Adiós! Espero volver a veros pronto para más diversión musical."
+                    "¡Adiós! Espero volver a veros pronto."
                 ];
                 
                 const randomMessage = farewellMessages[Math.floor(Math.random() * farewellMessages.length)];
@@ -391,7 +391,7 @@ const NewGameDecisionHandler = {
                 
                 return handlerInput.responseBuilder
                     .speak(`<voice name="${voiceConfig.voice}">¡Genial! ¿Sois los mismos jugadores?</voice>`)
-                    .reprompt("¿Son los mismos jugadores?")
+                    .reprompt("¿Sois los mismos jugadores?")
                     .getResponse();
             }
             
@@ -402,7 +402,7 @@ const NewGameDecisionHandler = {
         } catch (error) {
             console.error('Error in NewGameDecisionHandler:', error);
             return handlerInput.responseBuilder
-                .speak('Vamos a empezar una nueva partida. ¿Cuántos jugadores sois hoy?')
+                .speak('Vamos a empezar una nueva partida. ¿Cuántos jugadores sois?')
                 .reprompt("Por favor, dime cuántos jugadores van a jugar hoy.")
                 .getResponse();
         }
@@ -446,7 +446,7 @@ const SamePlayersHandler = {
                         createdAt: new Date().toISOString()
                     });
                 } catch (error) {
-                    console.error('Error al reiniciar puntajes:', error);
+                    console.error('Error al reiniciar el score:', error);
                 }
                 
                 attributesManager.setSessionAttributes(attributes);
@@ -467,7 +467,7 @@ const SamePlayersHandler = {
                 
                 return handlerInput.responseBuilder
                     .speak(`<voice name="${voiceConfig.voice}">Entendido. Vamos a empezar de cero. ¿Cuántos jugadores sois?</voice>`)
-                    .reprompt("Por favor, dime cuántos jugadores van a jugar hoy.")
+                    .reprompt("Por favor, dime cuántos jugadores vais a jugar.")
                     .getResponse();
             }
             
@@ -526,7 +526,6 @@ const SessionEndedRequestHandler = {
 };
 
 
-// Helper functions implementations
 async function handleAnswer(handlerInput, voiceConfig) {
     try {
         const { attributesManager, requestEnvelope } = handlerInput;
@@ -564,12 +563,12 @@ async function handleAnswer(handlerInput, voiceConfig) {
         
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            .reprompt("¿Quieren continuar con la siguiente pregunta?")
+            .reprompt("¿Queréis seguir con la siguiente pregunta?")
             .getResponse();
     } catch (error) {
         console.error('Error in handleAnswer:', error);
         return handlerInput.responseBuilder
-            .speak('Ocurrió un error al procesar tu respuesta. Volviendo al menú principal.')
+            .speak('Ha habido un error al procesar tu respuesta. Volviendo al menú principal.')
             .getResponse();
     }
 }
@@ -589,11 +588,11 @@ async function askNextQuestion(handlerInput, voiceConfig) {
             });
         }
         
-        // Incrementar contador para el jugador actual
+        // Aumento el contador para el jugador actual
         attributes.questionsPerPlayer[attributes.currentPlayerName] = 
             (attributes.questionsPerPlayer[attributes.currentPlayerName] || 0) + 1;
         
-        // Verificar si es momento de la pregunta final
+        // Verifico si es momento de la pregunta final
         const minQuestions = Math.min(...Object.values(attributes.questionsPerPlayer));
         if (minQuestions >= 2) {
             return startFinalTeamQuestion(handlerInput, voiceConfig);
@@ -631,7 +630,7 @@ async function askNextQuestion(handlerInput, voiceConfig) {
         
         attributesManager.setSessionAttributes(attributes);
         
-        const speakOutput = `<voice name="${voiceConfig.voice}">La siguiente pregunta es para ${attributes.currentPlayerName}. Categoría: ${attributes.currentCategory}. ${question.question}</voice>`;
+        const speakOutput = `<voice name="${voiceConfig.voice}">La siguiente pregunta es para ${attributes.currentPlayerName}. ${question.question}</voice>`;
         
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -640,7 +639,7 @@ async function askNextQuestion(handlerInput, voiceConfig) {
     } catch (error) {
         console.error('Error in askNextQuestion:', error);
         return handlerInput.responseBuilder
-            .speak('Hubo un problema al preparar la siguiente pregunta. Volviendo al inicio.')
+            .speak('Ha habido un problema al preparar la siguiente pregunta. Volviendo al inicio.')
             .getResponse();
     }
 }
@@ -674,7 +673,7 @@ function startTeamQuestion(handlerInput, voiceConfig) {
     } catch (error) {
         console.error('Error in startTeamQuestion:', error);
         return handlerInput.responseBuilder
-            .speak('Hubo un problema al iniciar la pregunta grupal. Continuamos con preguntas individuales.')
+            .speak('Ha habido un problema al iniciar la pregunta grupal. Continuamos con preguntas individuales.')
             .getResponse();
     }
 }

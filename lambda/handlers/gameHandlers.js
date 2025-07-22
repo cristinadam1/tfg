@@ -685,16 +685,14 @@ function startFinalTeamQuestion(handlerInput, voiceConfig) {
         
         verifySessionAttributes(attributes);
         
-        // Seleccionar pregunta final especial
-        const finalQuestions = questions.FINAL || [
-            {
-                question: "Como equipo, ¿cuál es el recuerdo más emotivo que habéis compartido hoy?",
-                answers: ["recuerdo emotivo", "momento especial", "buen recuerdo"]
-            }
-        ];
+        if (!questions.FINAL || questions.FINAL.length === 0) {
+            throw new Error('No hay preguntas FINAL definidas');
+        }
         
-        const finalQuestion = finalQuestions[Math.floor(Math.random() * finalQuestions.length)];
-        attributes.finalQuestion = finalQuestion;
+        const finalQuestion = questions.FINAL[Math.floor(Math.random() * questions.FINAL.length)];
+        
+        attributes.currentQuestion = finalQuestion; 
+        attributes.isFinalQuestion = true;  
         attributes.gameState = gameStates.FINAL_TEAM_QUESTION;
         attributesManager.setSessionAttributes(attributes);
         

@@ -40,7 +40,7 @@ module.exports = {
 
   VIAJES: [
     {
-      question: "¿En qué país puedes visitar las pirámides de Giza?",
+      question: "¿En qué país se pueden visitar las pirámides de Giza?",
       answer: "Egipto",
       hints: ["País africano", "Tiene el Nilo"],
       difficulty: 1
@@ -130,7 +130,7 @@ module.exports = {
       difficulty: 1
     },
     {
-      question: "¿Qué plato español se prepara con arroz, mariscos y azafrán?",
+      question: "¿Qué plato famoso español se prepara con arroz?",
       answer: "paella",
       hints: ["Es típica de Valencia", "Se cocina en una sartén grande"],
       difficulty: 1
@@ -164,19 +164,73 @@ module.exports = {
       answer: "camarero",
       hints: ["Sirve comida", "Trabaja con delantal"],
       difficulty: 1
+    },
+    {
+      question: "¿Quién segaba el trigo con hoz en verano?",
+      answer: "segador",
+      hints: ["Trabaja en la siega", "Usa una hoz"],
+      difficulty: 2
+    },
+    {
+      question: "¿Cómo se llama la persona que recoge aceitunas en el olivar?",
+      answer: "aceitunero",
+      hints: ["Trabaja en invierno", "Suele usar vara"],
+      difficulty: 2
+    },
+    {
+      question: "¿Quién lleva mulas o burros cargados por el campo?",
+      answer: "arriero",
+      hints: ["Guía animales", "Transporta carga"],
+      difficulty: 2
+    },
+    {
+      question: "¿Cómo se llama la mujer que ayudaba en los partos en el pueblo?",
+      answer: "comadrona",
+      hints: ["Sin médico", "Ayudaba a parir"],
+      difficulty: 2
+    },
+    {
+      question: "¿Quién arreglaba los cacharros de barro o hacía botijos?",
+      answer: "alfarero",
+      hints: ["Trabaja con barro", "Hace vasijas"],
+      difficulty: 2
+    },
+    {
+      question: "¿Qué oficio tenía el que vendía pescado en los pueblos?",
+      answer: "pescadero",
+      hints: ["Vendía sardinas", "A veces iba en furgoneta"],
+      difficulty: 2
+    },
+    {
+      question: "¿Quién hacía esparto o pleita para sillas y capazos?",
+      answer: "espartero",
+      hints: ["Trabaja con esparto", "Hace sillas y esteras"],
+      difficulty: 2
+    },
+    {
+      question: "¿Cómo se llama el que trabaja en la viña recogiendo uvas?",
+      answer: "vendimiador",
+      hints: ["Trabaja en la vendimia", "Recoge uvas"],
+      difficulty: 2
+    },
+    {
+      question: "¿Quién mataba el cerdo y preparaba los embutidos en la matanza?",
+      answer: "matarife",
+      hints: ["Trabaja en la matanza", "Sabe hacer morcillas"],
+      difficulty: 2
     }
   ],
 
   TECNOLOGÍA: [
     {
       question: "¿Cómo se llama el dispositivo con el que hacemos llamadas?",
-      answer: "teléfono",
+      answers: ["teléfono", "movil", "telefono movil"],
       hints: ["Puede ser móvil", "Tiene teclado o pantalla táctil"],
       difficulty: 1
     },
     {
       question: "¿Qué aparato sirve para ver películas y noticias?",
-      answer: "televisor",
+      answers: ["televisor", "tele", "television"],
       hints: ["Tiene pantalla", "Lo usamos en el salón"],
       difficulty: 1
     }
@@ -193,8 +247,8 @@ module.exports = {
 
   MEDICINAS: [
     {
-      question: "¿Cómo se llama la pastilla que tomamos para el dolor?",
-      answer: "analgésico",
+      question: "¿Cómo se llama la pastilla que se toma para el dolor?",
+      answers: ["analgésico", "ibuprofeno", "paracetamol"],
       hints: ["Puede ser paracetamol", "Calma dolores"],
       difficulty: 2
     }
@@ -226,7 +280,7 @@ module.exports = {
     },
     {
       question: "¿Qué película española de los 70 protagonizó Alfredo Landa con el personaje de Paco el del 27?",
-      answer: "No desearás al vecino del quinto",
+      answers: ["No desearás al vecino del quinto", "No deseara al vecino del quinto"],
       hints: ["Del género del 'landismo'", "Trata de un portero de finca urbana"],
       difficulty: 3
     },
@@ -256,7 +310,7 @@ module.exports = {
     },
     {
       question: "¿Qué famoso cantante español era conocido como 'El Divo de Jaén'?",
-      answer: "Raphael",
+      answers: ["Raphael", "Rafael"],
       hints: ["Tiene una voz muy característica", "Cantó 'Yo soy aquel'"],
       difficulty: 2
     }

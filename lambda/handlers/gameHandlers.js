@@ -322,36 +322,36 @@ const ShowRankingHandler = {
             const attributes = attributesManager.getSessionAttributes();
             const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
 
-            // Mostrar ranking de forma positiva
             const sortedPlayers = [...attributes.players].sort((a, b) => b.score - a.score);
-            
             let rankingMessage = `<voice name="${voiceConfig.voice}">¡Todos habéis jugado genial! `;
             
             if (sortedPlayers.length === 1) {
                 rankingMessage += `¡${sortedPlayers[0].name}, has conseguido ${sortedPlayers[0].score} puntos! `;
             } else {
-                // Mensaje especial para empates
                 const topScore = sortedPlayers[0].score;
                 const topPlayers = sortedPlayers.filter(p => p.score === topScore);
-                
+
                 if (topPlayers.length > 1) {
                     const names = topPlayers.map(p => p.name).join(' y ');
                     rankingMessage += `¡${names} habéis empatado en primer lugar con ${topScore} puntos! `;
                 } else {
-                    rankingMessage += `¡${sortedPlayers[0].name} lidera con ${sortedPlayers[0].score} puntos! `;
+                    rankingMessage += `¡${topPlayers[0].name} lidera con ${topScore} puntos! `;
                 }
+
+                // Excluye a los topPlayers del resto del ranking
+                const otherPlayers = sortedPlayers.filter(p => !topPlayers.includes(p));
                 
-                // Mencionar a todos los jugadores positivamente
-                rankingMessage += `Pero todos lo habéis hecho fenomenal: `;
-                rankingMessage += sortedPlayers.map(p => `${p.name} con ${p.score} puntos`).join(', ') + '. ';
+                if (otherPlayers.length > 0) {
+                    rankingMessage += `Aquí están los demás resultados: `;
+                    rankingMessage += otherPlayers.map(p => `${p.name} con ${p.score} puntos`).join(', ') + '. ';
+                }
             }
-            
+
             rankingMessage += `¿Queréis jugar otra partida?</voice>`;
-            
-            // Actualizar estado para manejar la respuesta
+
             attributes.gameState = gameStates.ASKING_FOR_NEW_GAME;
             attributesManager.setSessionAttributes(attributes);
-            
+
             return handlerInput.responseBuilder
                 .speak(rankingMessage)
                 .reprompt("¿Queréis jugar otra partida?")
@@ -365,6 +365,7 @@ const ShowRankingHandler = {
         }
     }
 };
+
 
 const NewGameDecisionHandler = {
     canHandle(handlerInput) {
@@ -383,7 +384,6 @@ const NewGameDecisionHandler = {
             const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
 
             if (intentName === 'AMAZON.NoIntent') {
-                // Despedida simpática
                 const farewellMessages = [
                     "¡Ha sido un placer jugar con vosotros! Espero que hayáis recordado buenos momentos.",
                     "¡Hasta la próxima! Me ha encantado jugar con vosotros.",

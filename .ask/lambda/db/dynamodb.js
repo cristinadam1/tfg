@@ -28,7 +28,7 @@ module.exports = {
             await dynamodb.put(params).promise();
             return true;
         } catch (error) {
-            console.error('Error al guardar sesión:', error);
+            console.error('Error al guardar la sesión:', error);
             return false;
         }
     },
@@ -55,7 +55,7 @@ module.exports = {
             await dynamodb.update(params).promise();
             return true;
         } catch (error) {
-            console.error('Error al actualizar jugador:', error);
+            console.error('Error al actualizar el jugador:', error);
             return false;
         }
     },

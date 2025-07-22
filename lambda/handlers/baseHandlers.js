@@ -353,7 +353,7 @@ const PlayerCountIntentHandler = {
                 
                 // Mensajes aleatorios para hacerlo más natural
                 const welcomeMessages = [
-                    `¡Perfecto ${playerName}! Ahora que nos conocemos mejor, ${firstPlayerName}, ¿qué canción te hace recordar buenos tiempos?`,
+                    `¡Un placer ${playerName}! Ahora que nos conocemos mejor, ${firstPlayerName}, ¿qué canción te hace recordar buenos tiempos?`,
                     `¡Estupendo ${playerName}! La música une generaciones. ${firstPlayerName}, ¿cuál es esa canción que nunca te cansa?`,
                     `¡Genial ${playerName}! Vamos a animar el ambiente. ${firstPlayerName}, ¿cuál es tu tema musical favorito?`
                 ];
@@ -381,10 +381,10 @@ const PlayerCountIntentHandler = {
             
             // Mensajes aleatorios para hacerlo más natural
             const responseMessages = [
-                `Encantado de conocerte, ${playerName}.`,
-                `¡Hola ${playerName}!`,
-                `Un placer, ${playerName}.`,
-                `¡Bienvenido, ${playerName}!`
+                `Encantada de conocerte, ${playerName}.`,
+                `¡Qué nombre tan bonito ${playerName}!`,
+                `Un placer conocerte, ${playerName}.`,
+                `¡Es un placer tenerte hoy aquí, ${playerName}!`
             ];
             
             const randomGreeting = responseMessages[Math.floor(Math.random() * responseMessages.length)];

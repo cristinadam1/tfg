@@ -27,7 +27,7 @@ const StartGameIntentHandler = {
         try {
             const attributes = handlerInput.attributesManager.getSessionAttributes();
             return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
-                   Alexa.getIntentName(handlerInput.requestEnvelope) === 'StartGameIntent' &&
+                   (Alexa.getIntentName(handlerInput.requestEnvelope) === 'StartGameIntent' || Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.YesIntent') &&
                    (attributes.gameState === gameStates.GAME_STARTED || 
                     attributes.gameState === gameStates.ASKING_FAVORITE_SONGS);
         } catch (error) {
@@ -41,18 +41,15 @@ const StartGameIntentHandler = {
             const { attributesManager } = handlerInput;
             const attributes = attributesManager.getSessionAttributes();
             
-            // Initialize game state
             attributes.questionCounter = attributes.questionCounter || 0;
             attributes.currentPlayerIndex = 0;
             attributes.currentPlayerName = attributes.players[0].name;
             attributes.questionsAsked = [];
             
-            // Select random category
             const categories = Object.keys(questions);
             const randomCategory = categories[Math.floor(Math.random() * categories.length)];
             attributes.currentCategory = randomCategory;
             
-            // Get first question
             const question = questions[randomCategory][0];
             attributes.currentQuestion = question;
             attributes.questionsAsked.push(question.question);
@@ -130,27 +127,35 @@ const TeamQuestionHandler = {
     canHandle(handlerInput) {
         try {
             const attributes = handlerInput.attributesManager.getSessionAttributes();
+            console.log('[TeamQuestionHandler] Verificando canHandle. GameState:', attributes.gameState);
+            
             return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
                    attributes.gameState === gameStates.TEAM_QUESTION;
         } catch (error) {
-            console.error('Error in TeamQuestionHandler canHandle:', error);
+            console.error('[TeamQuestionHandler] Error en canHandle:', error);
             return false;
         }
     },
 
     async handle(handlerInput) {
         try {
+            console.log('[TeamQuestionHandler] Iniciando manejo de pregunta grupal');
             const { attributesManager, requestEnvelope } = handlerInput;
             const attributes = attributesManager.getSessionAttributes();
             const intentName = Alexa.getIntentName(requestEnvelope);
             const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
             
+            console.log('[TeamQuestionHandler] Intent recibido:', intentName);
+            console.log('[TeamQuestionHandler] Atributos actuales:', JSON.stringify(attributes, null, 2));
+            
             verifySessionAttributes(attributes);
             
             const teammateIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;
             const teammateName = attributes.players[teammateIndex].name;
-            
+            console.log(`[TeamQuestionHandler] Compañero de equipo: ${teammateName}`);
+
             if (intentName === 'AMAZON.NoIntent') {
+                console.log('[TeamQuestionHandler] Usuario rechazó pregunta grupal. Volviendo a individual.');
                 attributes.gameState = gameStates.INDIVIDUAL_QUESTION;
                 attributesManager.setSessionAttributes(attributes);
                 
@@ -161,6 +166,7 @@ const TeamQuestionHandler = {
             }
             
             if (intentName === 'AMAZON.YesIntent') {
+                console.log('[TeamQuestionHandler] Usuario aceptó pregunta grupal');
                 return handlerInput.responseBuilder
                     .speak(`<voice name="${voiceConfig.voice}">Perfecto. Trabajad juntos con ${teammateName}. Cuando estéis listos, decidme la respuesta. La pregunta es: ${attributes.currentQuestion.question}</voice>`)
                     .reprompt("¿Cuál es vuestra respuesta en equipo?")
@@ -172,11 +178,15 @@ const TeamQuestionHandler = {
                 const possibleAnswers = attributes.currentQuestion.answers || [attributes.currentQuestion.answer];
                 const isCorrect = possibleAnswers.some(ans => normalizeString(userAnswer).includes(normalizeString(ans)));
                 
+                console.log(`[TeamQuestionHandler] Respuesta recibida: "${userAnswer}". Correcta?: ${isCorrect}`);
+                
                 if (isCorrect) {
+                    console.log('[TeamQuestionHandler] Respuesta correcta. Actualizando puntuaciones...');
                     attributes.players[attributes.currentPlayerIndex].score += 1;
                     attributes.players[teammateIndex].score += 1;
 
                     try {
+                        console.log('[TeamQuestionHandler] Guardando puntuación grupal en DynamoDB...');
                         await db.saveGameSession(requestEnvelope.session.sessionId, {
                             playerCount: attributes.playerCount,
                             players: attributes.players,
@@ -184,8 +194,9 @@ const TeamQuestionHandler = {
                             currentPlayerIndex: attributes.currentPlayerIndex,
                             createdAt: attributes.createdAt
                         });
+                        console.log('[TeamQuestionHandler] Puntuación guardada exitosamente');
                     } catch (error) {
-                        console.error('Error al guardar puntuación grupal:', error);
+                        console.error('[TeamQuestionHandler] Error al guardar puntuación grupal:', error);
                     }
                 }
                 
@@ -193,6 +204,8 @@ const TeamQuestionHandler = {
                 attributes.currentPlayerName = attributes.players[attributes.currentPlayerIndex].name;
                 attributes.gameState = gameStates.INDIVIDUAL_QUESTION;
                 attributesManager.setSessionAttributes(attributes);
+                
+                console.log('[TeamQuestionHandler] Nuevo jugador actual:', attributes.currentPlayerName);
                 
                 const speakOutput = `<voice name="${voiceConfig.voice}">` +
                     `${getRandomFeedback(isCorrect, possibleAnswers[0])} ` +
@@ -204,60 +217,73 @@ const TeamQuestionHandler = {
                     .getResponse();
             }
             
+            console.log('[TeamQuestionHandler] Intent no reconocido. Pidiendo confirmación...');
             return handlerInput.responseBuilder
                 .speak("¿Quieres responder esta pregunta con un compañero? Responde sí o no.")
                 .reprompt("¿Responden en equipo? Di sí o no.")
                 .getResponse();
         } catch (error) {
-            console.error('Error in TeamQuestionHandler handle:', error);
+            console.error('[TeamQuestionHandler] Error en handle:', error);
             return handlerInput.responseBuilder
                 .speak('Ha habido un error en la pregunta grupal. Volviendo a preguntas individuales.')
                 .getResponse();
         }
     }
 };
+
 const FinalTeamQuestionHandler = {
     canHandle(handlerInput) {
         const attributes = handlerInput.attributesManager.getSessionAttributes();
+        console.log('[FinalTeamQuestionHandler] Verificando canHandle. GameState:', attributes.gameState);
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
                attributes.gameState === gameStates.FINAL_TEAM_QUESTION;
     },
 
     async handle(handlerInput) {
         try {
+            console.log('[FinalTeamQuestionHandler] Iniciando manejo de pregunta final grupal');
             const { attributesManager, requestEnvelope } = handlerInput;
             const attributes = attributesManager.getSessionAttributes();
             const intentName = Alexa.getIntentName(requestEnvelope);
             const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
             
+            console.log('[FinalTeamQuestionHandler] Intent recibido:', intentName);
+            console.log('[FinalTeamQuestionHandler] Atributos actuales:', JSON.stringify(attributes, null, 2));
+            
             verifySessionAttributes(attributes);
 
             if (intentName === 'AnswerIntent') {
                 const userAnswer = Alexa.getSlotValue(requestEnvelope, 'answer');
-                const possibleAnswers = attributes.finalQuestion.answers || [attributes.finalQuestion.answer];
+                // Use currentQuestion instead of finalQuestion
+                const possibleAnswers = attributes.currentQuestion.answers || [attributes.currentQuestion.answer];
                 const isCorrect = possibleAnswers.some(ans => normalizeString(userAnswer).includes(normalizeString(ans)));
                 
-                // Todos los jugadores ganan puntos en la pregunta final
+                console.log(`[FinalTeamQuestionHandler] Respuesta final recibida: "${userAnswer}". Correcta?: ${isCorrect}`);
+
                 if (isCorrect) {
+                    console.log('[FinalTeamQuestionHandler] Respuesta final correcta. Asignando puntos dobles...');
                     attributes.players.forEach(player => {
-                        player.score += 2; // Doble puntos para la pregunta final
+                        player.score += 2;
                     });
+                    console.log('[FinalTeamQuestionHandler] Nuevos puntajes:', attributes.players.map(p => `${p.name}: ${p.score}`).join(', '));
 
                     try {
+                        console.log('[FinalTeamQuestionHandler] Guardando resultados finales en DynamoDB...');
                         await db.saveGameSession(requestEnvelope.session.sessionId, {
                             playerCount: attributes.playerCount,
                             players: attributes.players,
                             gameState: gameStates.SHOW_RANKING,
                             createdAt: attributes.createdAt
                         });
+                        console.log('[FinalTeamQuestionHandler] Resultados guardados exitosamente');
                     } catch (error) {
-                        console.error('Error al guardar puntuación final:', error);
+                        console.error('[FinalTeamQuestionHandler] Error al guardar puntuación final:', error);
                     }
                 }
 
-                // Preparar para mostrar ranking
                 attributes.gameState = gameStates.SHOW_RANKING;
                 attributesManager.setSessionAttributes(attributes);
+                console.log('[FinalTeamQuestionHandler] Transición a estado SHOW_RANKING');
 
                 const feedback = isCorrect 
                     ? "¡Respuesta correcta! Todos ganáis puntos extra. " 
@@ -269,12 +295,13 @@ const FinalTeamQuestionHandler = {
                     .getResponse();
             }
             
+            console.log('[FinalTeamQuestionHandler] Intent no reconocido. Pidiendo respuesta...');
             return handlerInput.responseBuilder
                 .speak("Por favor, decidme vuestra respuesta conjunta.")
                 .reprompt("¿Cuál es vuestra respuesta como equipo?")
                 .getResponse();
         } catch (error) {
-            console.error('Error in FinalTeamQuestionHandler:', error);
+            console.error('[FinalTeamQuestionHandler] Error en handle:', error);
             return handlerInput.responseBuilder
                 .speak('Ha habido un error en la pregunta final. Vamos a ver los resultados.')
                 .getResponse();
@@ -360,8 +387,7 @@ const NewGameDecisionHandler = {
                 const farewellMessages = [
                     "¡Ha sido un placer jugar con vosotros! Espero que hayáis recordado buenos momentos.",
                     "¡Hasta la próxima! Me ha encantado jugar con vosotros.",
-                    "¡Gracias por jugar! No olvidéis seguir creando buenos recuerdos.",
-                    "¡Adiós! Espero volver a veros pronto."
+                    "¡Gracias por jugar! No olvidéis seguir creando buenos recuerdos."
                 ];
                 
                 const randomMessage = farewellMessages[Math.floor(Math.random() * farewellMessages.length)];

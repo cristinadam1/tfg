@@ -198,5 +198,67 @@ module.exports = {
       hints: ["Puede ser paracetamol", "Calma dolores"],
       difficulty: 2
     }
+  ],
+  FINAL: [
+    {
+      question: "¿Qué canción de los 60 empezaba con 'Para bailar la Bamba se necesita una poca de gracia'?",
+      answer: "La Bamba",
+      hints: ["Fue popularizada por Ritchie Valens", "Es de origen mexicano"],
+      difficulty: 2
+    },
+    {
+      question: "¿Qué programa de TVE presentaba Chicho Ibáñez Serrador los sábados por la noche?",
+      answer: "Un, dos, tres",
+      hints: ["Concurso famoso", "Tenía la sección 'El precio justo'"],
+      difficulty: 3
+    },
+    {
+      question: "¿Qué producto se anunciaba con el eslogan 'El algodón no engaña'?",
+      answer: "Donuts",
+      hints: ["Era un bollo", "De la marca Artiach"],
+      difficulty: 2
+    },
+    {
+      question: "¿Qué famoso torero fue apodado 'El Niño de la Capea'?",
+      answer: "Paquirri",
+      hints: ["Murió en la plaza de Pozoblanco", "Estuvo casado con Isabel Pantoja"],
+      difficulty: 3
+    },
+    {
+      question: "¿Qué película española de los 70 protagonizó Alfredo Landa con el personaje de Paco el del 27?",
+      answer: "No desearás al vecino del quinto",
+      hints: ["Del género del 'landismo'", "Trata de un portero de finca urbana"],
+      difficulty: 3
+    },
+    {
+      question: "¿Qué grupo musical español cantaba 'Eres tú' en Eurovisión 1973?",
+      answer: "Mocedades",
+      hints: ["Procedían del País Vasco", "Quedaron en segundo lugar"],
+      difficulty: 2
+    },
+    {
+      question: "¿Qué popular presentadora era conocida como 'La tía de las galletas'?",
+      answer: "Marisa Medina",
+      hints: ["Presentaba 'Un globo, dos globos, tres globos'", "Trabajó en TVE"],
+      difficulty: 3
+    },
+    {
+      question: "¿Qué famoso coche de los 70 se conocía como 'el seiscientos'?",
+      answer: "SEAT 600",
+      hints: ["Fue el primer coche de muchas familias", "Era muy pequeño"],
+      difficulty: 1
+    },
+    {
+      question: "¿Qué refresco se anunciaba con 'La chispa de la vida' en los 80?",
+      answer: "Coca-Cola",
+      hints: ["Es de color oscuro", "Tiene cafeína"],
+      difficulty: 1
+    },
+    {
+      question: "¿Qué famoso cantante español era conocido como 'El Divo de Jaén'?",
+      answer: "Raphael",
+      hints: ["Tiene una voz muy característica", "Cantó 'Yo soy aquel'"],
+      difficulty: 2
+    }
   ]
 };

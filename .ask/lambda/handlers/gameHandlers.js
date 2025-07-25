@@ -366,6 +366,74 @@ const ShowRankingHandler = {
     }
 };
 
+const HelpIntentHandler = {
+    canHandle(handlerInput) {
+      return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+             Alexa.getIntentName(handlerInput.requestEnvelope) === 'HelpIntent';
+    },
+  
+    handle(handlerInput) {
+      const { attributesManager } = handlerInput;
+      const attributes = attributesManager.getSessionAttributes();
+      const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
+  
+      // Verificar que estamos en un estado donde tiene sentido dar pistas
+      if (attributes.gameState !== gameStates.INDIVIDUAL_QUESTION && 
+          attributes.gameState !== gameStates.TEAM_QUESTION &&
+          attributes.gameState !== gameStates.FINAL_TEAM_QUESTION) {
+        return handlerInput.responseBuilder
+          .speak("Ahora mismo no hay ninguna pregunta activa. ¿Quieres que empecemos una partida?")
+          .reprompt("¿Quieres empezar una partida?")
+          .getResponse();
+      }
+  
+      // Obtener la pregunta actual
+      const currentQuestion = attributes.currentQuestion;
+      if (!currentQuestion || !currentQuestion.hints || currentQuestion.hints.length === 0) {
+        return handlerInput.responseBuilder
+          .speak("Lo siento, no tengo pistas para esta pregunta. Intenta adivinarlo lo mejor que puedas.")
+          .reprompt(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`)
+          .getResponse();
+      }
+  
+      // Lógica para manejar las pistas usadas
+      if (!attributes.hintsUsed) {
+        attributes.hintsUsed = {};
+      }
+      
+      if (!attributes.hintsUsed[currentQuestion.question]) {
+        attributes.hintsUsed[currentQuestion.question] = 0;
+      }
+  
+      const hintsUsedCount = attributes.hintsUsed[currentQuestion.question];
+      
+      // Si ya se usaron todas las pistas
+      if (hintsUsedCount >= currentQuestion.hints.length) {
+        return handlerInput.responseBuilder
+          .speak("Ya te he dado todas las pistas que tengo para esta pregunta. ¡Intenta adivinarlo!")
+          .reprompt(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`)
+          .getResponse();
+      }
+  
+      // Dar la siguiente pista
+      const hint = currentQuestion.hints[hintsUsedCount];
+      attributes.hintsUsed[currentQuestion.question] = hintsUsedCount + 1;
+      attributesManager.setSessionAttributes(attributes);
+  
+      let speakOutput = `<voice name="${voiceConfig.voice}">Aquí tienes una pista: ${hint}. `;
+      
+      if (hintsUsedCount + 1 < currentQuestion.hints.length) {
+        speakOutput += `Si necesitas más ayuda, dime "no sé" de nuevo. `;
+      }
+      
+      speakOutput += `¿Cuál crees que es la respuesta?</voice>`;
+  
+      return handlerInput.responseBuilder
+        .speak(speakOutput)
+        .reprompt(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`)
+        .getResponse();
+    }
+  };
 
 const NewGameDecisionHandler = {
     canHandle(handlerInput) {
@@ -744,5 +812,6 @@ module.exports = {
     ShowRankingHandler,
     SamePlayersHandler,
     NewGameDecisionHandler,
-    SessionEndedRequestHandler
+    SessionEndedRequestHandler,
+    HelpIntentHandler
 };

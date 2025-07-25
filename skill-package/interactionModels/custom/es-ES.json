@@ -33,6 +33,22 @@
             ]
           },
           {
+            "name": "HelpIntent",
+            "samples": [
+              "no sé",
+              "nose",
+              "no lo sé",
+              "ayúdame",
+              "dame una pista",
+              "dame una pita",
+              "no tengo ni idea",
+              "no me acuerdo",
+              "no lo recuerdo",
+              "no caigo",
+              "pista"
+            ]
+          },
+          {
             "name": "AMAZON.YesIntent",
             "samples": [
               "si"

@@ -256,7 +256,7 @@ module.exports = {
   FINAL: [
     {
       question: "¿Qué canción de los 60 empezaba con 'Para bailar la Bamba se necesita una poca de gracia'?",
-      answer: "La Bamba",
+      answer: "Bamba",
       hints: ["Fue popularizada por Ritchie Valens", "Es de origen mexicano"],
       difficulty: 2
     },

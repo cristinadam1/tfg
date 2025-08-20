@@ -1,7 +1,18 @@
 const Alexa = require('ask-sdk-core');
 const db = require('../db/dynamodb');
 const gameStates = require('../game/gameStates');
+const voiceRoles = require('../utils/voiceRoles');
 
+
+const generateSpeech = (text, includeGreeting = false) => {
+    const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
+    
+    if (includeGreeting) {
+        return `<voice name="${voiceConfig.voice}">${voiceConfig.greeting}<prosody rate="slow">${text}</prosody></voice>`;
+    } else {
+        return `<voice name="${voiceConfig.voice}"><prosody rate="slow">${text}</prosody></voice>`;
+    }
+};
 
 const LaunchRequestHandler = {
     canHandle(handlerInput) {
@@ -15,16 +26,15 @@ const LaunchRequestHandler = {
         attributes.currentPlayer = 1;
         
         handlerInput.attributesManager.setSessionAttributes(attributes);
-        
-        const speakOutput = '¡Bienvenidos a Regreso al Pasado! ¿Cuántos jugadores sois hoy?';
-        
+
+        const speakOutput = generateSpeech('¿Cuántos jugadores sois hoy?', true);
+
         return handlerInput.responseBuilder
             .speak(speakOutput)
             .reprompt(speakOutput)
             .getResponse();
     }
 };
-
 
 const CancelAndStopIntentHandler = {
     canHandle(handlerInput) {
@@ -33,28 +43,28 @@ const CancelAndStopIntentHandler = {
                 || Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.StopIntent');
     },
     handle(handlerInput) {
-        const speakOutput = '¡Hasta luego!';
+        const speakOutput = generateSpeech('¡Hasta luego!');
         return handlerInput.responseBuilder
             .speak(speakOutput)
             .getResponse();
     }
 };
 
-
 const ErrorHandler = {
     canHandle() {
         return true;
     },
     handle(handlerInput, error) {
-        //console.error(`Error handled: ${error.message}`);
         console.error('Error handled:', error);
+        const speakOutput = generateSpeech('Creo que no te he entendido. Por favor inténtalo de nuevo.');
+        const repromptOutput = generateSpeech('Perdona, sigo sin entenderte. Pídele ayuda a alguno de mis creadores');
+        
         return handlerInput.responseBuilder
-            .speak('Creo que no te he entendido. Por favor inténtalo de nuevo.')
-            .reprompt('Perdona, sigo sin entenderte. Pidele ayuda a alguno de mis creadores')
+            .speak(speakOutput)
+            .reprompt(repromptOutput)
             .getResponse();
     }
 };
-
 
 const FallbackIntentHandler = {
     canHandle(handlerInput) {
@@ -62,7 +72,7 @@ const FallbackIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.FallbackIntent';
     },
     handle(handlerInput) {
-        const speakOutput = 'Perdona, ¿podrías repetirmelo?.';
+        const speakOutput = generateSpeech('Perdona, ¿podrías repetírmelo?');
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -83,18 +93,21 @@ const GetFavoriteSongIntentHandler = {
         const songName = Alexa.getSlotValue(handlerInput.requestEnvelope, 'song');
         const { attributesManager, requestEnvelope } = handlerInput;
         const attributes = attributesManager.getSessionAttributes();
+        const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
         
         if (!songName) {
             const currentPlayerName = attributes.players[attributes.currentPlayer].name;
+            const speakOutput = generateSpeech('No he entendido el nombre de la canción. ¿Puedes repetirlo?');
+            const repromptOutput = generateSpeech(`${currentPlayerName}, ¿cuál es tu canción favorita?`);
+            
             return handlerInput.responseBuilder
-                .speak("No he entendido el nombre de la canción. ¿Puedes repetirlo?")
-                .reprompt(`${currentPlayerName}, ¿cuál es tu canción favorita?`)
+                .speak(speakOutput)
+                .reprompt(repromptOutput)
                 .getResponse();
         }
         
         attributes.players[attributes.currentPlayer].favoriteSong = songName;
         
-        // Guardar en DynamoDB
         try {
             const success = await db.saveGameSession(
                 requestEnvelope.session.sessionId, 
@@ -142,17 +155,19 @@ const GetFavoriteSongIntentHandler = {
             
             let speakOutput;
             if (url) {
-                speakOutput = `<speak>¡Buena elección! Aquí tienes un fragmento de ${songName}. <audio src="${url}"/> ${nextPlayer.name}, ¿y cuál es tu canción favorita?</speak>`;
+                const message = `¡Buena elección! Aquí tienes un fragmento de ${songName}. ${nextPlayer.name}, ¿y cuál es tu canción favorita?`;
+                speakOutput = `<speak>${generateSpeech(message)} <audio src="${url}"/></speak>`;
             } else {
-                speakOutput = `No conozco la cancion ${songName} pero seguro que me encantaría. Para el proximo día me la aprenderé. ${nextPlayer.name}, ¿cuál es tu canción favorita?`;
+                speakOutput = generateSpeech(`No conozco la canción ${songName} pero seguro que me encantaría. Para el próximo día me la aprenderé. ${nextPlayer.name}, ¿cuál es tu canción favorita?`);
             }
+            
+            const repromptOutput = generateSpeech(`${nextPlayer.name}, ¿cuál es tu canción favorita?`);
             
             return handlerInput.responseBuilder
                 .speak(speakOutput)
-                .reprompt(`${nextPlayer.name}, ¿cuál es tu canción favorita?`)
+                .reprompt(repromptOutput)
                 .getResponse();
         } else {
-            // Todos han dicho su canción
             attributes.gameState = gameStates.GAME_STARTED;
             handlerInput.attributesManager.setSessionAttributes(attributes);
             
@@ -173,68 +188,79 @@ const GetFavoriteSongIntentHandler = {
             
             let speakOutput;
             if (url) {
-                speakOutput = `<speak>¡Buena elección! Aquí tienes un fragmento de ${songName}. <audio src="${url}"/> ¡Y con esto ya tenemos todas vuestras canciones favoritas! ¿Listos para empezar el juego?</speak>`;
+                const message = `¡Buena elección! Aquí tienes un fragmento de ${songName}. ¡Y con esto ya tenemos todas vuestras canciones favoritas! ¿Listos para empezar el juego?`;
+                speakOutput = `<speak>${generateSpeech(message)} <audio src="${url}"/></speak>`;
             } else {
-                speakOutput = `No conozco la cancion ${songName}, pero seguro que esta muy chula. Para el proximo día me la aprenderé ¿Listos para empezar el juego?`;
+                speakOutput = generateSpeech(`No conozco la canción ${songName}, pero seguro que está muy chula. Para el próximo día me la aprenderé. ¿Listos para empezar el juego?`);
             }
+            
+            const repromptOutput = generateSpeech('¿Queréis empezar el juego?');
             
             return handlerInput.responseBuilder
                 .speak(speakOutput)
-                .reprompt("¿Queréis empezar el juego?")
+                .reprompt(repromptOutput)
                 .getResponse();
         }
     }
 };
 
-
 const PlayerCountIntentHandler = {
     canHandle(handlerInput) {
-      console.log('Verificando si PlayerCountIntentHandler puede manejar la solicitud');
-      try {
-        const attributes = handlerInput.attributesManager.getSessionAttributes();
-        const requestType = Alexa.getRequestType(handlerInput.requestEnvelope);
-        const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
-        
-        const canHandle = requestType === 'IntentRequest' &&
-                        intentName === 'PlayerCountIntent' &&
-                        (!attributes.gameState || 
-                         attributes.gameState === gameStates.START || 
-                         attributes.gameState === gameStates.REGISTERING_PLAYER_COUNT);
-        
-        console.log(`PlayerCountIntentHandler canHandle: ${canHandle}`);
-        return canHandle;
-      } catch (error) {
-        console.error('Error en canHandle:', error);
-        return false;
-      }
-    },
+        console.log('Verificando si PlayerCountIntentHandler puede manejar la solicitud');
+        try {
+          const requestType = Alexa.getRequestType(handlerInput.requestEnvelope);
+          
+          if (requestType !== 'IntentRequest') {
+            return false;
+          }
+          
+          const attributes = handlerInput.attributesManager.getSessionAttributes();
+          const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
+          
+          const canHandle = intentName === 'PlayerCountIntent' &&
+                          (!attributes.gameState || 
+                           attributes.gameState === gameStates.START || 
+                           attributes.gameState === gameStates.REGISTERING_PLAYER_COUNT);
+          
+          console.log(`PlayerCountIntentHandler canHandle: ${canHandle}`);
+          return canHandle;
+        } catch (error) {
+          console.error('Error en canHandle:', error);
+          return false;
+        }
+      },
   
     async handle(handlerInput) {
       console.log('PlayerCountIntentHandler handle iniciado');
       try {
         const playerCount = parseInt(Alexa.getSlotValue(handlerInput.requestEnvelope, 'count'));
-        const { attributesManager } = handlerInput;
+        const { attributesManager, requestEnvelope } = handlerInput;
         const attributes = attributesManager.getSessionAttributes();
         
         console.log(`Número de jugadores recibido: ${playerCount}`);
         
         if (isNaN(playerCount)) {
           console.error('Número de jugadores no es un número válido');
+          const speakOutput = generateSpeech('No entendí cuántos jugadores sois. ¿Podrías repetirlo?');
+          const repromptOutput = generateSpeech('Por favor, dime cuántos jugadores sois hoy.');
+          
           return handlerInput.responseBuilder
-            .speak("No entendí cuántos jugadores sois. ¿Podrías repetirlo?")
-            .reprompt("Por favor, dime cuántos jugadores sois hoy.")
+            .speak(speakOutput)
+            .reprompt(repromptOutput)
             .getResponse();
         }
         
         if (playerCount < 1 || playerCount > 8) {
           console.error(`Número de jugadores fuera de rango: ${playerCount}`);
+          const speakOutput = generateSpeech('Por favor, dime un número entre 1 y 8 jugadores.');
+          const repromptOutput = generateSpeech('¿Cuántos jugadores van a jugar hoy?');
+          
           return handlerInput.responseBuilder
-            .speak("Por favor, dime un número entre 1 y 8 jugadores.")
-            .reprompt("¿Cuántos jugadores van a jugar hoy?")
+            .speak(speakOutput)
+            .reprompt(repromptOutput)
             .getResponse();
         }
         
-        // Inicializar atributos de juego
         attributes.playerCount = playerCount;
         attributes.currentPlayer = 1;
         attributes.players = [];
@@ -255,21 +281,39 @@ const PlayerCountIntentHandler = {
 
         console.log('Atributos actualizados:', attributes);
         
+        const speakOutput = generateSpeech(`Perfecto, sois ${playerCount} jugadores. Jugador 1, ¿cómo te llamas?`);
+        const repromptOutput = generateSpeech('Jugador 1, por favor dime tu nombre.');
+        
         return handlerInput.responseBuilder
-          .speak(`Perfecto, sois ${playerCount} jugadores. Jugador 1, ¿cómo te llamas?`)
-          .reprompt("Jugador 1, por favor dime tu nombre.")
+          .speak(speakOutput)
+          .reprompt(repromptOutput)
           .getResponse();
       } catch (error) {
         console.error('Error en handle:', error);
+        const speakOutput = generateSpeech('Ha habido un error al procesar tu respuesta.');
+        const repromptOutput = generateSpeech('¿Podrías repetir cuántos jugadores sois?');
+        
         return handlerInput.responseBuilder
-          .speak("Ha habido un error al procesar tu respuesta.")
-          .reprompt("¿Podrías repetir cuántos jugadores sois?")
+          .speak(speakOutput)
+          .reprompt(repromptOutput)
           .getResponse();
       }
     }
 };
 
-  const GetPlayerNameIntentHandler = {
+const SessionEndedRequestHandler = {
+    canHandle(handlerInput) {
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'SessionEndedRequest';
+    },
+    handle(handlerInput) {
+        const { reason } = handlerInput.requestEnvelope.request;
+        console.log(`Sesión terminada. Razón: ${reason}`);
+
+        return handlerInput.responseBuilder.getResponse();
+    }
+};
+
+const GetPlayerNameIntentHandler = {
     canHandle(handlerInput) {
         const attributes = handlerInput.attributesManager.getSessionAttributes();
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
@@ -283,30 +327,33 @@ const PlayerCountIntentHandler = {
         const attributes = attributesManager.getSessionAttributes();
         
         if (!playerName || playerName.trim().length === 0) {
+            const repromptMessage = generateSpeech(`Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`);
+            const speakOutput = generateSpeech('No he entendido tu nombre. ¿Puedes repetirlo?');
+
             return handlerInput.responseBuilder
-                .speak("No he entendido tu nombre. ¿Puedes repetirlo?")
-                .reprompt(`Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`)
+                .speak(speakOutput)
+                .reprompt(repromptMessage)
                 .getResponse();
         }
 
         if (playerName.length > 20) {
+            const repromptMessage = generateSpeech(`Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`);
+            const speakOutput = generateSpeech('El nombre es demasiado largo. Por favor usa un nombre más corto.');
+
             return handlerInput.responseBuilder
-                .speak("El nombre es demasiado largo. Por favor usa un nombre más corto.")
-                .reprompt(`Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`)
+                .speak(speakOutput)
+                .reprompt(repromptMessage)
                 .getResponse();
         }
 
-        // Añadir jugador a la lista
         attributes.players.push({
             name: playerName.trim(),
             score: 0,
             favoriteSong: null
         });
 
-        // Verificar si hemos registrado todos los nombres
         if (attributes.currentPlayer >= attributes.playerCount) {
             try {
-                // Guardar en DynamoDB
                 const success = await db.saveGameSession(requestEnvelope.session.sessionId, {
                     playerCount: attributes.playerCount,
                     currentPlayer: attributes.currentPlayer,
@@ -332,46 +379,52 @@ const PlayerCountIntentHandler = {
                 ];
                 
                 const randomMessage = welcomeMessages[Math.floor(Math.random() * welcomeMessages.length)];
-                
                 handlerInput.attributesManager.setSessionAttributes(attributes);
+
+                const speakOutput = generateSpeech(randomMessage);
+                const repromptOutput = generateSpeech(`${firstPlayerName}, ¿podrías decirme tu canción favorita?`);
                 
                 return handlerInput.responseBuilder
-                    .speak(randomMessage)
-                    .reprompt(`${firstPlayerName}, ¿podrías decirme tu canción favorita?`)
+                    .speak(speakOutput)
+                    .reprompt(repromptOutput)
                     .getResponse();
                     
             } catch (error) {
                 console.error('Error al guardar jugadores:', error);
+                const speakOutput = generateSpeech('Ha habido un problema al guardar los datos. Vamos a intentarlo de nuevo desde el principio.');
+                
                 return handlerInput.responseBuilder
-                    .speak("Hubo un problema al guardar los datos. Vamos a intentarlo de nuevo desde el principio.")
-                    .reprompt("¿Cuántos jugadores sois hoy?")
+                    .speak(speakOutput)
+                    .reprompt('¿Cuántos jugadores sois hoy?')
                     .getResponse();
             }
         } else {
-            // Seguir registrando nombres
             attributes.currentPlayer += 1;
             handlerInput.attributesManager.setSessionAttributes(attributes);
             
             const responseMessages = [
                 `Encantada de conocerte, ${playerName}.`,
                 `¡Qué nombre tan bonito ${playerName}!`,
-                `Un placer conocerte, ${playerName}.`,
+                `Es un placer conocerte, ${playerName}.`,
                 `¡Es un placer tenerte hoy aquí, ${playerName}!`
             ];
             
             const randomGreeting = responseMessages[Math.floor(Math.random() * responseMessages.length)];
             
+            const speakOutput = generateSpeech(`${randomGreeting} Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`);
+            const repromptOutput = generateSpeech(`Jugador ${attributes.currentPlayer}, ¿podrías decirme tu nombre?`);
+            
             return handlerInput.responseBuilder
-                .speak(`${randomGreeting} Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`)
-                .reprompt(`Jugador ${attributes.currentPlayer}, ¿podrías decirme tu nombre?`)
+                .speak(speakOutput)
+                .reprompt(repromptOutput)
                 .getResponse();
         }
     }
 };
-  
 
 module.exports = {
     LaunchRequestHandler,
+    SessionEndedRequestHandler,
     GetPlayerNameIntentHandler,
     PlayerCountIntentHandler,
     CancelAndStopIntentHandler,
@@ -379,4 +432,3 @@ module.exports = {
     GetFavoriteSongIntentHandler,
     FallbackIntentHandler
 };
-

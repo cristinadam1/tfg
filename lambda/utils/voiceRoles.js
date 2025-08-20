@@ -1,41 +1,36 @@
 module.exports = {
   getRoleByTime: function() {
     const hour = new Date().getHours();
-    if (hour >= 6 && hour < 12) return "AFTERNOON"; //"MORNING";
-    if (hour >= 12 && hour < 20) return "MORNING";//"AFTERNOON";
+    if (hour >= 6 && hour < 14) return "MORNING";
+    if (hour >= 14 && hour < 21) return "AFTERNOON";
     return "NIGHT";
   },
 
   getVoiceConfig: function(role) {
     const roles = {
-      CHILD: {
-        voice: "Conchita",
-        style: "childish",
-        pitch: "+20%",
-        rate: "fast"
-      },
-      ADULT: {
-        voice: "Sergio",
-        style: "calm",
-        pitch: "+15%",
-        rate: "medium"
-      },
       MORNING: {
-        voice: "Lucia",
-        style: "cheerful",
-        greeting: "¡Buenos días! ¿Listos para una mañana de recuerdos?"
+        voice: "Conchita", 
+        greeting: "<prosody rate='slow' volume='soft'>¡Buenos días! Bienvenidos a una mañana de recuerdos</prosody>",
+        style: "<prosody rate='slow' pitch='+5%'>" 
       },
       AFTERNOON: {
-        voice: "Enrique",  
-        style: "cheerful",
-        greeting: "¡Buenas tardes! ¿Preparados para un viaje al pasado?"
+        voice: "Lucia", 
+        greeting: "<prosody rate='slow' volume='medium'>¡Buenas tardes! Creo que es el momento perfecto para revivir recuerdos.</prosody>",
+        style: "<prosody rate='slow' pitch='normal'>" 
       },
       NIGHT: {
-        voice: "Mia",
-        style: "calm",
-        greeting: "¡Buenas noches! Perfecto momento para recordar."
+        voice: "Enrique", 
+        greeting: "<prosody rate='slow' volume='soft'>¡Buenas noches! Un momento ideal para recordar tranquilamente.</prosody>",
+        style: "<prosody rate='slow' pitch='-5%'>" 
       }
     };
-    return roles[role] || roles.ADULT;
+    
+    const config = roles[role] || roles.MORNING;
+    
+    return {
+      ...config,
+      ssmlStyle: config.style || "<prosody rate='slow'>", 
+      ssmlEnd: "</prosody>"
+    };
   }
 };

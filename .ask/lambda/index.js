@@ -9,7 +9,7 @@ process.env.ASK_DEBUG = 'true';
 exports.handler = Alexa.SkillBuilders.custom()
     .addRequestHandlers(
         baseHandlers.LaunchRequestHandler,
-        //baseHandlers.HelpIntentHandler,
+        baseHandlers.SessionEndedRequestHandler,
         baseHandlers.FallbackIntentHandler,
         baseHandlers.PlayerCountIntentHandler,
         baseHandlers.GetPlayerNameIntentHandler,
@@ -22,7 +22,7 @@ exports.handler = Alexa.SkillBuilders.custom()
         gameHandlers.ShowRankingHandler,
         gameHandlers.NewGameDecisionHandler,
         gameHandlers.SamePlayersHandler,       
-        gameHandlers.SessionEndedRequestHandler  
+        gameHandlers.SessionEndedRequestHandler
     )
     .addErrorHandlers(baseHandlers.ErrorHandler)
     .lambda();

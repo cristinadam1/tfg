@@ -8,7 +8,7 @@ const db = require('../db/dynamodb');
 const normalizeString = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
 const getRandomFeedback = (isCorrect, correctAnswer) => {
     if (isCorrect) {
-        const positiveFeedback = ["¡Excelente!", "¡Muy bien!", "¡Correcto!", "¡Qué bien se te da esto!", "¡Perfecto!"];
+        const positiveFeedback = ["¡Excelente!", "¡Muy bien!", "¡Correcto!", "¡Qué bien se te da esto!", "¡Respuesta correcta!"];
         return positiveFeedback[Math.floor(Math.random() * positiveFeedback.length)];
     }
     return `Casi. La respuesta correcta era ${correctAnswer}.`;

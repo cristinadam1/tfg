@@ -10,7 +10,6 @@ const LaunchRequestHandler = {
     handle(handlerInput) {
         const attributes = handlerInput.attributesManager.getSessionAttributes();
         
-        // Reiniciar estado si es una nueva sesión
         attributes.gameState = gameStates.REGISTERING_PLAYER_COUNT;
         attributes.players = [];
         attributes.currentPlayer = 1;
@@ -19,22 +18,6 @@ const LaunchRequestHandler = {
         
         const speakOutput = '¡Bienvenidos a Regreso al Pasado! ¿Cuántos jugadores sois hoy?';
         
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .reprompt(speakOutput)
-            .getResponse();
-    }
-};
-
-
-const HelpIntentHandler = {
-    canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.HelpIntent';
-    },
-    handle(handlerInput) {
-        const speakOutput = 'Puedo guardar y leer tus datos. Este es el HelpIntentHandler';
-
         return handlerInput.responseBuilder
             .speak(speakOutput)
             .reprompt(speakOutput)
@@ -67,7 +50,7 @@ const ErrorHandler = {
         console.error('Error handled:', error);
         return handlerInput.responseBuilder
             .speak('Creo que no te he entendido. Por favor inténtalo de nuevo.')
-            .reprompt('¿Necesitas ayuda? Prueba a decir "ayuda".')
+            .reprompt('Perdona, sigo sin entenderte. Pidele ayuda a alguno de mis creadores')
             .getResponse();
     }
 };
@@ -109,7 +92,6 @@ const GetFavoriteSongIntentHandler = {
                 .getResponse();
         }
         
-        // Guardar la canción favorita del jugador
         attributes.players[attributes.currentPlayer].favoriteSong = songName;
         
         // Guardar en DynamoDB
@@ -132,10 +114,8 @@ const GetFavoriteSongIntentHandler = {
             console.error('Error en saveGameSession:', error);
         }
         
-        // Obtener URL del audio
         const url = await db.getSongUrl(songName);
         
-        // Seleccionar siguiente jugador aleatorio que no haya dicho su canción
         const playersWithoutSong = attributes.players
             .map((player, index) => ({...player, index}))
             .filter(player => !player.favoriteSong);
@@ -145,7 +125,6 @@ const GetFavoriteSongIntentHandler = {
             attributes.currentPlayer = nextPlayer.index;
             handlerInput.attributesManager.setSessionAttributes(attributes);
             
-            // Guardar cambio de jugador actual en DynamoDB
             try {
                 await db.saveGameSession(
                     requestEnvelope.session.sessionId,
@@ -177,7 +156,6 @@ const GetFavoriteSongIntentHandler = {
             attributes.gameState = gameStates.GAME_STARTED;
             handlerInput.attributesManager.setSessionAttributes(attributes);
             
-            // Guardar estado final en DynamoDB
             try {
                 await db.saveGameSession(
                     requestEnvelope.session.sessionId,
@@ -284,7 +262,7 @@ const PlayerCountIntentHandler = {
       } catch (error) {
         console.error('Error en handle:', error);
         return handlerInput.responseBuilder
-          .speak("Ha ocurrido un error al procesar tu respuesta.")
+          .speak("Ha habido un error al procesar tu respuesta.")
           .reprompt("¿Podrías repetir cuántos jugadores sois?")
           .getResponse();
       }
@@ -304,7 +282,6 @@ const PlayerCountIntentHandler = {
         const { attributesManager, requestEnvelope } = handlerInput;
         const attributes = attributesManager.getSessionAttributes();
         
-        // Validar nombre
         if (!playerName || playerName.trim().length === 0) {
             return handlerInput.responseBuilder
                 .speak("No he entendido tu nombre. ¿Puedes repetirlo?")
@@ -312,7 +289,6 @@ const PlayerCountIntentHandler = {
                 .getResponse();
         }
 
-        // Validar longitud del nombre
         if (playerName.length > 20) {
             return handlerInput.responseBuilder
                 .speak("El nombre es demasiado largo. Por favor usa un nombre más corto.")
@@ -343,15 +319,12 @@ const PlayerCountIntentHandler = {
                     throw new Error('Error al guardar en DynamoDB');
                 }
 
-                // Cambiar estado del juego
                 attributes.gameState = gameStates.ASKING_FAVORITE_SONGS;
                 
-                // Seleccionar primer jugador aleatorio para canción
                 const firstPlayerIndex = Math.floor(Math.random() * attributes.players.length);
                 attributes.currentPlayer = firstPlayerIndex;
                 const firstPlayerName = attributes.players[firstPlayerIndex].name;
                 
-                // Mensajes aleatorios para hacerlo más natural
                 const welcomeMessages = [
                     `¡Un placer ${playerName}! Ahora que nos conocemos mejor, ${firstPlayerName}, ¿qué canción te hace recordar buenos tiempos?`,
                     `¡Estupendo ${playerName}! La música une generaciones. ${firstPlayerName}, ¿cuál es esa canción que nunca te cansa?`,
@@ -379,7 +352,6 @@ const PlayerCountIntentHandler = {
             attributes.currentPlayer += 1;
             handlerInput.attributesManager.setSessionAttributes(attributes);
             
-            // Mensajes aleatorios para hacerlo más natural
             const responseMessages = [
                 `Encantada de conocerte, ${playerName}.`,
                 `¡Qué nombre tan bonito ${playerName}!`,
@@ -398,14 +370,13 @@ const PlayerCountIntentHandler = {
 };
   
 
-// Exporta todos los handlers base
 module.exports = {
     LaunchRequestHandler,
     GetPlayerNameIntentHandler,
     PlayerCountIntentHandler,
-    HelpIntentHandler,
     CancelAndStopIntentHandler,
     ErrorHandler,
     GetFavoriteSongIntentHandler,
     FallbackIntentHandler
 };
+

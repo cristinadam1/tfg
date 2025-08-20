@@ -5,7 +5,6 @@ const gameStates = require('../game/gameStates');
 const { sendProgressiveResponse } = require('ask-sdk-core');
 const db = require('../db/dynamodb');
 
-// Helper functions
 const normalizeString = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
 const getRandomFeedback = (isCorrect, correctAnswer) => {
     if (isCorrect) {
@@ -254,7 +253,7 @@ const FinalTeamQuestionHandler = {
 
             if (intentName === 'AnswerIntent') {
                 const userAnswer = Alexa.getSlotValue(requestEnvelope, 'answer');
-                // Use currentQuestion instead of finalQuestion
+
                 const possibleAnswers = attributes.currentQuestion.answers || [attributes.currentQuestion.answer];
                 const isCorrect = possibleAnswers.some(ans => normalizeString(userAnswer).includes(normalizeString(ans)));
                 
@@ -338,7 +337,6 @@ const ShowRankingHandler = {
                     rankingMessage += `¡${topPlayers[0].name} lidera con ${topScore} puntos! `;
                 }
 
-                // Excluye a los topPlayers del resto del ranking
                 const otherPlayers = sortedPlayers.filter(p => !topPlayers.includes(p));
                 
                 if (otherPlayers.length > 0) {
@@ -381,8 +379,8 @@ const HelpIntentHandler = {
           attributes.gameState !== gameStates.TEAM_QUESTION &&
           attributes.gameState !== gameStates.FINAL_TEAM_QUESTION) {
         return handlerInput.responseBuilder
-          .speak("Ahora mismo no hay ninguna pregunta activa. ¿Quieres que empecemos una partida?")
-          .reprompt("¿Quieres empezar una partida?")
+          .speak("Perdona, creo que no te he entendido")
+          .reprompt("¿Te importaría repetirmelo?")
           .getResponse();
       }
   
@@ -421,14 +419,15 @@ const HelpIntentHandler = {
         speakOutput += `¡Si necesitas más ayuda, no dudes en pedirmela!. `;
       }
       
-      speakOutput += `¿Cuál crees que es la respuesta?</voice>`;
+      // Volver a hacer la pregunta después de la pista
+      speakOutput += `La pregunta era: ${currentQuestion.question}. ¿Cuál crees que es la respuesta?</voice>`;
   
       return handlerInput.responseBuilder
         .speak(speakOutput)
         .reprompt(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`)
         .getResponse();
     }
-  };
+};
 
 const NewGameDecisionHandler = {
     canHandle(handlerInput) {
@@ -514,7 +513,7 @@ const SamePlayersHandler = {
             const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
 
             if (intentName === 'AMAZON.YesIntent') {
-                // Reiniciar juego con mismos jugadores
+                // Reiniciar juego con los mismos jugadores
                 attributes.gameState = gameStates.GAME_STARTED;
                 attributes.questionCounter = 0;
                 attributes.questionsAsked = [];
@@ -608,11 +607,9 @@ const SessionEndedRequestHandler = {
             }
         }
         
-        // No se puede enviar respuesta con SessionEndedRequest
         return handlerInput.responseBuilder.getResponse();
     }
 };
-
 
 async function handleAnswer(handlerInput, voiceConfig) {
     try {
@@ -686,7 +683,6 @@ async function askNextQuestion(handlerInput, voiceConfig) {
             return startFinalTeamQuestion(handlerInput, voiceConfig);
         }
         
-        // Resto de la lógica normal para preguntas individuales/equipo
         let questionsLeft = questions[attributes.currentCategory].filter(q => 
             !attributes.questionsAsked.includes(q.question)
         );

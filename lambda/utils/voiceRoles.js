@@ -1,8 +1,8 @@
 module.exports = {
   getRoleByTime: function() {
     const hour = new Date().getHours();
-    if (hour >= 6 && hour < 12) return "MORNING";
-    if (hour >= 12 && hour < 20) return "AFTERNOON";
+    if (hour >= 6 && hour < 12) return "AFTERNOON"; //"MORNING";
+    if (hour >= 12 && hour < 20) return "MORNING";//"AFTERNOON";
     return "NIGHT";
   },
 
@@ -15,9 +15,9 @@ module.exports = {
         rate: "fast"
       },
       ADULT: {
-        voice: "Enrique",
-        style: "neutral",
-        pitch: "default",
+        voice: "Sergio",
+        style: "calm",
+        pitch: "+15%",
         rate: "medium"
       },
       MORNING: {
@@ -27,7 +27,7 @@ module.exports = {
       },
       AFTERNOON: {
         voice: "Enrique",  
-        style: "conversational",
+        style: "cheerful",
         greeting: "¡Buenas tardes! ¿Preparados para un viaje al pasado?"
       },
       NIGHT: {

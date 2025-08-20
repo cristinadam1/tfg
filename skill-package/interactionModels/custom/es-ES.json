@@ -245,6 +245,18 @@
             ]
           },
           {
+            "name": "TeamAgreementIntent",
+            "slots": [],
+            "samples": [
+              "ya estamos de acuerdo",
+              "ya estamos listos",
+              "ya estamos",
+              "ya está",
+              "ya hemos decidido",
+              "hemos decidido"
+            ]
+          },
+          {
             "name": "StartGameIntent",
             "slots": [],
             "samples": [

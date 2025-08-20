@@ -5,7 +5,6 @@ const gameStates = require('../game/gameStates');
 const { sendProgressiveResponse } = require('ask-sdk-core');
 const db = require('../db/dynamodb');
 
-// Helper functions
 const normalizeString = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
 const getRandomFeedback = (isCorrect, correctAnswer) => {
     if (isCorrect) {
@@ -254,7 +253,7 @@ const FinalTeamQuestionHandler = {
 
             if (intentName === 'AnswerIntent') {
                 const userAnswer = Alexa.getSlotValue(requestEnvelope, 'answer');
-                // Use currentQuestion instead of finalQuestion
+
                 const possibleAnswers = attributes.currentQuestion.answers || [attributes.currentQuestion.answer];
                 const isCorrect = possibleAnswers.some(ans => normalizeString(userAnswer).includes(normalizeString(ans)));
                 
@@ -338,7 +337,6 @@ const ShowRankingHandler = {
                     rankingMessage += `¡${topPlayers[0].name} lidera con ${topScore} puntos! `;
                 }
 
-                // Excluye a los topPlayers del resto del ranking
                 const otherPlayers = sortedPlayers.filter(p => !topPlayers.includes(p));
                 
                 if (otherPlayers.length > 0) {
@@ -377,17 +375,15 @@ const HelpIntentHandler = {
       const attributes = attributesManager.getSessionAttributes();
       const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
   
-      // Verificar que estamos en un estado donde tiene sentido dar pistas
       if (attributes.gameState !== gameStates.INDIVIDUAL_QUESTION && 
           attributes.gameState !== gameStates.TEAM_QUESTION &&
           attributes.gameState !== gameStates.FINAL_TEAM_QUESTION) {
         return handlerInput.responseBuilder
-          .speak("Ahora mismo no hay ninguna pregunta activa. ¿Quieres que empecemos una partida?")
-          .reprompt("¿Quieres empezar una partida?")
+          .speak("Perdona, creo que no te he entendido")
+          .reprompt("¿Te importaría repetirmelo?")
           .getResponse();
       }
   
-      // Obtener la pregunta actual
       const currentQuestion = attributes.currentQuestion;
       if (!currentQuestion || !currentQuestion.hints || currentQuestion.hints.length === 0) {
         return handlerInput.responseBuilder
@@ -396,7 +392,6 @@ const HelpIntentHandler = {
           .getResponse();
       }
   
-      // Lógica para manejar las pistas usadas
       if (!attributes.hintsUsed) {
         attributes.hintsUsed = {};
       }
@@ -407,15 +402,13 @@ const HelpIntentHandler = {
   
       const hintsUsedCount = attributes.hintsUsed[currentQuestion.question];
       
-      // Si ya se usaron todas las pistas
       if (hintsUsedCount >= currentQuestion.hints.length) {
         return handlerInput.responseBuilder
-          .speak("Ya te he dado todas las pistas que tengo para esta pregunta. ¡Intenta adivinarlo!")
+          .speak("¡Oh vaya! parece que te he dado todas las pistas que tengo para esta pregunta. ¡Intenta adivinarlo!")
           .reprompt(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`)
           .getResponse();
       }
   
-      // Dar la siguiente pista
       const hint = currentQuestion.hints[hintsUsedCount];
       attributes.hintsUsed[currentQuestion.question] = hintsUsedCount + 1;
       attributesManager.setSessionAttributes(attributes);
@@ -423,17 +416,18 @@ const HelpIntentHandler = {
       let speakOutput = `<voice name="${voiceConfig.voice}">Aquí tienes una pista: ${hint}. `;
       
       if (hintsUsedCount + 1 < currentQuestion.hints.length) {
-        speakOutput += `Si necesitas más ayuda, dime "no sé" de nuevo. `;
+        speakOutput += `¡Si necesitas más ayuda, no dudes en pedirmela!. `;
       }
       
-      speakOutput += `¿Cuál crees que es la respuesta?</voice>`;
+      // Volver a hacer la pregunta después de la pista
+      speakOutput += `La pregunta era: ${currentQuestion.question}. ¿Cuál crees que es la respuesta?</voice>`;
   
       return handlerInput.responseBuilder
         .speak(speakOutput)
         .reprompt(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`)
         .getResponse();
     }
-  };
+};
 
 const NewGameDecisionHandler = {
     canHandle(handlerInput) {
@@ -479,7 +473,6 @@ const NewGameDecisionHandler = {
             }
             
             if (intentName === 'AMAZON.YesIntent') {
-                // Preguntar si son los mismos jugadores
                 attributes.gameState = gameStates.ASKING_ABOUT_PLAYERS;
                 attributesManager.setSessionAttributes(attributes);
                 
@@ -520,7 +513,7 @@ const SamePlayersHandler = {
             const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
 
             if (intentName === 'AMAZON.YesIntent') {
-                // Reiniciar juego con mismos jugadores
+                // Reiniciar juego con los mismos jugadores
                 attributes.gameState = gameStates.GAME_STARTED;
                 attributes.questionCounter = 0;
                 attributes.questionsAsked = [];
@@ -614,11 +607,9 @@ const SessionEndedRequestHandler = {
             }
         }
         
-        // No se puede enviar respuesta con SessionEndedRequest
         return handlerInput.responseBuilder.getResponse();
     }
 };
-
 
 async function handleAnswer(handlerInput, voiceConfig) {
     try {
@@ -692,7 +683,6 @@ async function askNextQuestion(handlerInput, voiceConfig) {
             return startFinalTeamQuestion(handlerInput, voiceConfig);
         }
         
-        // Resto de la lógica normal para preguntas individuales/equipo
         let questionsLeft = questions[attributes.currentCategory].filter(q => 
             !attributes.questionsAsked.includes(q.question)
         );

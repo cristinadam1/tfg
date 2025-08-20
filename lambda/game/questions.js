@@ -268,7 +268,7 @@ module.exports = {
     },
     {
       question: "¿Qué producto se anunciaba con el eslogan 'El algodón no engaña'?",
-      answer: "Donuts",
+      answer: "don limpio",
       hints: ["Era un bollo", "De la marca Artiach"],
       difficulty: 2
     },

@@ -342,7 +342,7 @@ const FinalTeamQuestionHandler = {
                     }
                 }
 
-                const speakOutput = feedback + "Vamos a ver los recuerdos que habéis evocado hoy. " + rankingMessage + "¿Queréis jugar otra partida?";
+                const speakOutput = feedback + `<voice name="${voiceConfig.voice}"><prosody rate="slow">Vamos a ver los recuerdos que habéis evocado hoy. </prosody></voice>` + rankingMessage + `<voice name="${voiceConfig.voice}"><prosody rate="slow">¿Queréis jugar otra partida?</prosody></voice>`;
 
                 attributes.gameState = gameStates.ASKING_FOR_NEW_GAME;
                 attributesManager.setSessionAttributes(attributes);

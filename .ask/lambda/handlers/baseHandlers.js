@@ -2,6 +2,7 @@ const Alexa = require('ask-sdk-core');
 const db = require('../db/dynamodb');
 const gameStates = require('../game/gameStates');
 const voiceRoles = require('../utils/voiceRoles');
+const aplUtils = require('../utils/aplUtils');
 
 
 const generateSpeech = (text, includeGreeting = false) => {
@@ -28,6 +29,8 @@ const LaunchRequestHandler = {
         handlerInput.attributesManager.setSessionAttributes(attributes);
 
         const speakOutput = generateSpeech('¿Cuántos jugadores sois hoy?', true);
+
+        aplUtils.showWelcomeScreen(handlerInput);
 
         return handlerInput.responseBuilder
             .speak(speakOutput)

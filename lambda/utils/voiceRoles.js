@@ -19,7 +19,7 @@ module.exports = {
         style: "<prosody rate='slow' pitch='normal'>" 
       },
       NIGHT: {
-        voice: "Enrique", 
+        voice: "Lucia", 
         greeting: "<prosody rate='slow' volume='soft'>¡Buenas noches! Un momento ideal para recordar tranquilamente.</prosody>",
         style: "<prosody rate='slow' pitch='-5%'>" 
       }

@@ -68,7 +68,7 @@ module.exports = {
     },
     {
       question: "¿Qué océano está entre África y Australia?",
-      answer: "Océano Índico",
+      answer: "Océano Índico, Índico",
       hints: ["Está cerca de la India", "No es el Atlántico"],
       difficulty: 2
     },
@@ -262,7 +262,7 @@ module.exports = {
     },
     {
       question: "¿Qué programa de TVE presentaba Chicho Ibáñez Serrador los sábados por la noche?",
-      answer: "Un, dos, tres",
+      answer: "Un dos tres",
       hints: ["Concurso famoso", "Tenía la sección 'El precio justo'"],
       difficulty: 3
     },

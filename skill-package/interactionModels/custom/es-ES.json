@@ -39,6 +39,9 @@
               "nose",
               "no lo sé",
               "ayúdame",
+              "necesito ayuda",
+              "necesito más ayuda",
+              "quiero que me ayudes",
               "dame una pista",
               "dame una pita",
               "no tengo ni idea",
@@ -198,6 +201,7 @@
             ],
             "samples": [
               "la {answer}",
+              "un {answer}",
               "el {answer}",
               "en {answer}",
               "los {answer}",

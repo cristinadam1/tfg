@@ -201,6 +201,9 @@
             ],
             "samples": [
               "la {answer}",
+              "no {answer}",
+              "la de {answer}",
+              "el de {answer}",
               "un {answer}",
               "el {answer}",
               "en {answer}",

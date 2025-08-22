@@ -4,6 +4,7 @@ const voiceRoles = require('../utils/voiceRoles');
 const gameStates = require('../game/gameStates');
 const { sendProgressiveResponse } = require('ask-sdk-core');
 const db = require('../db/dynamodb');
+const aplUtils = require('../utils/aplUtils');
 
 const normalizeString = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
 const getRandomFeedback = (isCorrect, correctAnswer, voiceConfig) => {
@@ -61,6 +62,8 @@ const StartGameIntentHandler = {
             const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">` +
                 `¡Vamos a empezar! La primera pregunta es para ${attributes.currentPlayerName}. ` +
                 `${question.question}</prosody></voice>`;
+
+            aplUtils.showQuestionWithImage(handlerInput, question);
             
             return handlerInput.responseBuilder
                 .speak(speakOutput)
@@ -169,6 +172,9 @@ const TeamQuestionHandler = {
             const teammateIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;
             const teammateName = attributes.players[teammateIndex].name;
             const currentPlayerName = attributes.players[attributes.currentPlayerIndex].name;
+
+            aplUtils.showQuestionWithImage(handlerInput, attributes.currentQuestion);
+
             console.log(`[TeamQuestionHandler] Jugador actual: ${currentPlayerName}, Compañero: ${teammateName}`);
 
             if (intentName === 'AnswerIntent') {
@@ -262,6 +268,8 @@ function startTeamQuestion(handlerInput, voiceConfig) {
         const teammateName = attributes.players[teammateIndex].name;
         const currentPlayerName = attributes.players[attributes.currentPlayerIndex].name;
         
+        aplUtils.showQuestionWithImage(handlerInput, question);
+
         const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">` +
             `¡Pregunta en equipo! ${currentPlayerName}, trabaja junto con ${teammateName}. ` +
             `La pregunta es: ${question.question}</prosody></voice>`;
@@ -290,6 +298,9 @@ const FinalTeamQuestionHandler = {
         try {
             const { attributesManager, requestEnvelope } = handlerInput;
             const attributes = attributesManager.getSessionAttributes();
+
+            aplUtils.showQuestionWithImage(handlerInput, attributes.currentQuestion);
+
             const intentName = Alexa.getIntentName(requestEnvelope);
             const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
             
@@ -316,7 +327,7 @@ const FinalTeamQuestionHandler = {
                 }
 
                 const feedback = isCorrect ? 
-                    "¡Respuesta correcta! Todos ganáis puntos extra. " : 
+                    `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡Respuesta correcta! Todos ganáis puntos extra.</prosody></voice>` : 
                     getRandomFeedback(false, possibleAnswers[0], voiceConfig);
 
                 const sortedPlayers = [...attributes.players].sort((a, b) => b.score - a.score);
@@ -330,9 +341,9 @@ const FinalTeamQuestionHandler = {
 
                     if (topPlayers.length > 1) {
                         const names = topPlayers.map(p => p.name).join(' y ');
-                        rankingMessage += `¡${names} habéis empatado en primer lugar con ${topScore} puntos! `;
+                        rankingMessage += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡${names} habéis empatado en primer lugar con ${topScore} puntos! </prosody></voice>`;
                     } else {
-                        rankingMessage += `¡${topPlayers[0].name} lidera con ${topScore} puntos! `;
+                        rankingMessage += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡${topPlayers[0].name} lidera con ${topScore} puntos! </prosody></voice>`;
                     }
 
                     const otherPlayers = sortedPlayers.filter(p => p.score < topScore);
@@ -426,7 +437,7 @@ const HelpIntentHandler = {
       if (attributes.gameState === gameStates.TEAM_QUESTION) {
         const teammateIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;
         const teammateName = attributes.players[teammateIndex].name;
-        speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">La pregunta era: ${currentQuestion.question}. Trabajad juntos ${attributes.currentPlayerName} y ${teammateName} para encontrar la respuesta.</prosody></voice>`;
+        speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">La pregunta era: ${currentQuestion.question}. Teneis que trabajar todos juntos ${attributes.currentPlayerName} y ${teammateName} para encontrar la respuesta.</prosody></voice>`;
         repromptMessage = "¿Cuál es vuestra respuesta en equipo?";
       } else if (attributes.gameState === gameStates.FINAL_TEAM_QUESTION) {
         speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">La pregunta era: ${currentQuestion.question}. Trabajad todos juntos para encontrar la respuesta final.</prosody></voice>`;
@@ -552,7 +563,7 @@ const SamePlayersHandler = {
                 attributesManager.setSessionAttributes(attributes);
                 
                 return handlerInput.responseBuilder
-                    .speak(`<voice name="${voiceConfig.voice}"><prosody rate="slow">Perfecto, misma pandilla. ¡Vamos a recordar más momentos! ¿Preparados?</prosody></voice>`)
+                    .speak(`<voice name="${voiceConfig.voice}"><prosody rate="slow">Perfecto, somos la misma pandilla. ¡Vamos a recordar más momentos! ¿Preparados?</prosody></voice>`)
                     .reprompt("¿Listos para empezar la nueva partida?")
                     .getResponse();
             }
@@ -738,6 +749,8 @@ async function askNextQuestion(handlerInput, voiceConfig) {
         
         const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">La siguiente pregunta es para ${attributes.currentPlayerName}. ${question.question}</prosody></voice>`;
         
+        aplUtils.showQuestionWithImage(handlerInput, question);
+
         return handlerInput.responseBuilder
             .speak(speakOutput)
             .reprompt(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`)
@@ -768,6 +781,8 @@ function startFinalTeamQuestion(handlerInput, voiceConfig) {
         attributes.isFinalQuestion = true;  
         attributes.gameState = gameStates.FINAL_TEAM_QUESTION;
         attributesManager.setSessionAttributes(attributes);
+
+        aplUtils.showQuestionWithImage(handlerInput, finalQuestion);
         
         const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡Pregunta final grupal! ${finalQuestion.question} Trabajad juntos para dar la mejor respuesta.</prosody></voice>`;
         

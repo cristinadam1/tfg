@@ -1,0 +1,34 @@
+{
+    "type": "APL",
+    "version": "2023.3",
+    "import": [
+      {
+        "name": "alexa-layouts",
+        "version": "1.7.0"
+      }
+    ],
+    "mainTemplate": {
+      "parameters": ["payload"],
+      "items": [
+        {
+          "type": "Container",
+          "width": "100vw",
+          "height": "100vh",
+          "alignItems": "center",
+          "justifyContent": "center",
+          "backgroundColor": "#232f3e",
+          "items": [
+            {
+              "type": "Image",
+              "id": "questionImage",
+              "source": "${payload.data.imageUrl}",
+              "width": "100%",
+              "height": "100%",
+              "scale": "best-fit",
+              "align": "center"
+            }
+          ]
+        }
+      ]
+    }
+  }

@@ -1,38 +1,64 @@
 const Alexa = require('ask-sdk-core');
-const welcomeDocument = require('../apl/welcomeScreen.json');
+const staticImageDocument = require('../apl/staticImage.json');
+const questionScreenDocument = require('../apl/questionScreen.json');
 
 function supportsAPL(handlerInput) {
     try {
         const supportedInterfaces = Alexa.getSupportedInterfaces(handlerInput.requestEnvelope);
-        const hasAPL = supportedInterfaces['Alexa.Presentation.APL'] !== undefined;
-        console.log(`Dispositivo soporta APL: ${hasAPL}`);
-        return hasAPL;
+        return supportedInterfaces['Alexa.Presentation.APL'] !== undefined;
     } catch (error) {
         console.error('Error verificando soporte APL:', error);
         return false;
     }
 }
 
-function showWelcomeScreen(handlerInput) {
+function showStaticImage(handlerInput, message = "¡Bienvenidos/as a Regreso al Pasado!") {
     if (supportsAPL(handlerInput)) {
-        console.log('Mostrando pantalla de bienvenida APL');
-        
         handlerInput.responseBuilder.addDirective({
             type: 'Alexa.Presentation.APL.RenderDocument',
-            version: '2024.1',
-            document: welcomeDocument,
+            version: '2023.3',
+            document: staticImageDocument,
             datasources: {
                 "data": {
-                    "welcomeMessage": "¡Bienvenidos/as a Regreso al Pasado!"
+                    "message": message
                 }
             }
         });
-    } else {
-        console.log('Dispositivo no soporta APL, omitiendo pantalla de bienvenida');
+    }
+}
+
+function showQuestionWithImage(handlerInput, questionData) {
+    if (supportsAPL(handlerInput)) {
+        let imageUrl;
+        
+        if (questionData.photo) {
+            if (questionData.photo.startsWith('http')) {
+                imageUrl = questionData.photo;
+            } else {
+                imageUrl = `https://imagenesregresopasado.s3.eu-west-1.amazonaws.com/${questionData.photo}`;
+            }
+        } else {
+            imageUrl = 'https://imagenesregresopasado.s3.eu-west-1.amazonaws.com/robot_sin_fondo.png';
+        }
+        
+        console.log('URL de imagen:', imageUrl); 
+        
+        handlerInput.responseBuilder.addDirective({
+            type: 'Alexa.Presentation.APL.RenderDocument',
+            version: '2023.3',
+            document: questionScreenDocument,
+            datasources: {
+                "data": {
+                    "question": questionData.question,
+                    "imageUrl": imageUrl
+                }
+            }
+        });
     }
 }
 
 module.exports = {
     supportsAPL,
-    showWelcomeScreen
+    showStaticImage,
+    showQuestionWithImage  
 };

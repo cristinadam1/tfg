@@ -30,7 +30,7 @@ const LaunchRequestHandler = {
 
         const speakOutput = generateSpeech('¿Cuántos jugadores sois hoy?', true);
 
-        aplUtils.showWelcomeScreen(handlerInput);
+        aplUtils.showStaticImage(handlerInput, "¡Bienvenidos/as a Regreso al Pasado!");
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -284,7 +284,7 @@ const PlayerCountIntentHandler = {
 
         console.log('Atributos actualizados:', attributes);
         
-        const speakOutput = generateSpeech(`Perfecto, sois ${playerCount} jugadores. Jugador 1, ¿cómo te llamas?`);
+        const speakOutput = generateSpeech(`Perfecto, sois ${playerCount} jugadores, ¡Nos lo vamos a pasar genial!. Jugador 1, ¿cómo te llamas?`);
         const repromptOutput = generateSpeech('Jugador 1, por favor dime tu nombre.');
         
         return handlerInput.responseBuilder

@@ -22,7 +22,9 @@ exports.handler = Alexa.SkillBuilders.custom()
         //gameHandlers.ShowRankingHandler,
         gameHandlers.NewGameDecisionHandler,
         gameHandlers.SamePlayersHandler,       
-        gameHandlers.SessionEndedRequestHandler
+        gameHandlers.SessionEndedRequestHandler,
+        gameHandlers.PassQuestionIntentHandler,
+        gameHandlers.HintOfferResponseHandler
     )
     .addErrorHandlers(baseHandlers.ErrorHandler)
     .lambda();

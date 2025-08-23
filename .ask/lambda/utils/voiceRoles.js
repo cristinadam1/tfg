@@ -10,7 +10,7 @@ module.exports = {
     const roles = {
       MORNING: {
         voice: "Lucia", 
-        greeting: "<prosody rate='slow' volume='soft'>¡Buenos días! Bienvenidos a una mañana de recuerdos</prosody>",
+        greeting: "<prosody rate='slow' volume='soft'>¡Buenos días! Bienvenidos a una mañana de recuerdos.</prosody>",
         style: "<prosody rate='slow' pitch='+5%'>" 
       },
       AFTERNOON: {

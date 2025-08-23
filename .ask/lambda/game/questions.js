@@ -2,15 +2,15 @@ module.exports = {
   IMAGEN: [
     {
       question: "¿Qué ciudad se conoce como 'La ciudad del amor'?",
-      answers: ["París", "Paris", "ciudad de París", "ciudad de Paris"],
-      hints: ["Está en Francia", "Tiene una torre muy famosa"],
+      answers: ["París.", "Paris.", "ciudad de París.", "ciudad de Paris."],
+      hints: ["Está en Francia.", "Tiene una torre muy famosa."],
       difficulty: 1,
       photo: "francia.png"
     },
     {
       question: "¿Cuál es el plato típico de Italia que se hace con masa y tomate?",
-      answer: "pizza",
-      hints: ["Se hace al horno", "Suele tener queso"],
+      answer: "pizza.",
+      hints: ["Se hace al horno.", "Suele tener queso."],
       difficulty: 1,
       photo: "pizza.png"
     },

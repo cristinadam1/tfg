@@ -83,6 +83,14 @@ const IndividualQuestionHandler = {
         try {
             const attributes = handlerInput.attributesManager.getSessionAttributes();
             const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
+
+            if (attributes.awaitingHintResponse) {
+                return false;
+            }
+            
+            if (attributes.expectingContinueConfirmation && intentName === 'AMAZON.YesIntent') {
+                return true;
+            }
             
             return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
                    (intentName === 'AnswerIntent' || intentName === 'AMAZON.YesIntent') &&
@@ -102,6 +110,12 @@ const IndividualQuestionHandler = {
             const attributes = attributesManager.getSessionAttributes();
             
             verifySessionAttributes(attributes);
+            
+            if (attributes.expectingContinueConfirmation && intentName === 'AMAZON.YesIntent') {
+                attributes.expectingContinueConfirmation = false;
+                attributesManager.setSessionAttributes(attributes);
+                return await askNextQuestion(handlerInput, voiceConfig);
+            }
             
             if (intentName === 'AnswerIntent') {
                 return await handleAnswer(handlerInput, voiceConfig);
@@ -147,16 +161,25 @@ const TeamQuestionHandler = {
             const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
             
             console.log('[TeamQuestionHandler] Verificando canHandle. GameState:', attributes.gameState, 'Intent:', intentName);
+
+            if (attributes.awaitingHintResponse) {
+                console.log('[TeamQuestionHandler] awaitingHintResponse es true, no manejando');
+                return false;
+            }
+            
+            if (attributes.expectingContinueConfirmation && intentName === 'AMAZON.YesIntent') {
+                return true;
+            }
             
             return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
                    attributes.gameState === gameStates.TEAM_QUESTION &&
-                   intentName !== 'HelpIntent'; 
+                   intentName !== 'HelpIntent' &&
+                   intentName !== 'PassQuestionIntent';
         } catch (error) {
             console.error('[TeamQuestionHandler] Error en canHandle:', error);
             return false;
         }
     },
-
     async handle(handlerInput) {
         try {
             console.log('[TeamQuestionHandler] Iniciando manejo de pregunta grupal');
@@ -290,15 +313,22 @@ function startTeamQuestion(handlerInput, voiceConfig) {
 const FinalTeamQuestionHandler = {
     canHandle(handlerInput) {
         const attributes = handlerInput.attributesManager.getSessionAttributes();
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
-               attributes.gameState === gameStates.FINAL_TEAM_QUESTION;
-    },
 
+        if (attributes.awaitingHintResponse) {
+            return false;
+        }
+
+        const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
+        
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+               attributes.gameState === gameStates.FINAL_TEAM_QUESTION &&
+               intentName !== 'PassQuestionIntent';
+    },
     async handle(handlerInput) {
         try {
             const { attributesManager, requestEnvelope } = handlerInput;
             const attributes = attributesManager.getSessionAttributes();
-
+            
             aplUtils.showQuestionWithImage(handlerInput, attributes.currentQuestion);
 
             const intentName = Alexa.getIntentName(requestEnvelope);
@@ -439,7 +469,7 @@ const HelpIntentHandler = {
       if (attributes.gameState === gameStates.TEAM_QUESTION) {
         const teammateIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;
         const teammateName = attributes.players[teammateIndex].name;
-        speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">La pregunta era: ${currentQuestion.question}. Teneis que trabajar todos juntos ${attributes.currentPlayerName} y ${teammateName} para encontrar la respuesta.</prosody></voice>`;
+        speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">La pregunta era: ${currentQuestion.question}. ${attributes.currentPlayerName} y ${teammateName} teneis que trabajar juntos para encontrar la respuesta.</prosody></voice>`;
         repromptMessage = "¿Cuál es vuestra respuesta en equipo?";
       } else if (attributes.gameState === gameStates.FINAL_TEAM_QUESTION) {
         speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">La pregunta era: ${currentQuestion.question}. Trabajad todos juntos para encontrar la respuesta final.</prosody></voice>`;
@@ -800,6 +830,146 @@ function startFinalTeamQuestion(handlerInput, voiceConfig) {
     }
 }
 
+const PassQuestionIntentHandler = {
+    canHandle(handlerInput) {
+        const attributes = handlerInput.attributesManager.getSessionAttributes();
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+               Alexa.getIntentName(handlerInput.requestEnvelope) === 'PassQuestionIntent' &&
+               (attributes.gameState === gameStates.INDIVIDUAL_QUESTION || 
+                attributes.gameState === gameStates.TEAM_QUESTION ||
+                attributes.gameState === gameStates.FINAL_TEAM_QUESTION) &&
+               !attributes.awaitingHintResponse;
+    },
+
+    handle(handlerInput) {
+        const { attributesManager } = handlerInput;
+        const attributes = attributesManager.getSessionAttributes();
+        const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
+
+        attributes.awaitingHintResponse = true;
+        attributesManager.setSessionAttributes(attributes);
+
+        let speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">¿Quieres que te dé una pista para ayudarte?</prosody></voice>`;
+        
+        let repromptMessage;
+        
+        if (attributes.gameState === gameStates.TEAM_QUESTION) {
+            const teammateIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;
+            const teammateName = attributes.players[teammateIndex].name;
+            repromptMessage = `¿${attributes.currentPlayerName} y ${teammateName}, queréis una pista para la pregunta en equipo?`;
+        } else if (attributes.gameState === gameStates.FINAL_TEAM_QUESTION) {
+            repromptMessage = "¿Queréis una pista para la pregunta final? Trabajad juntos.";
+        } else {
+            repromptMessage = `¿${attributes.currentPlayerName}, quieres una pista?`;
+        }
+
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt(repromptMessage)
+            .getResponse();
+    }
+};
+
+const HintOfferResponseHandler = {
+    canHandle(handlerInput) {
+        const attributes = handlerInput.attributesManager.getSessionAttributes();
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+               (Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.YesIntent' ||
+                Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.NoIntent') &&
+               attributes.awaitingHintResponse === true;
+    },
+
+    async handle(handlerInput) {
+        const { attributesManager, requestEnvelope } = handlerInput;
+        const attributes = attributesManager.getSessionAttributes();
+        const intentName = Alexa.getIntentName(requestEnvelope);
+        const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
+        
+        attributes.awaitingHintResponse = false;
+        attributesManager.setSessionAttributes(attributes);
+
+        if (intentName === 'AMAZON.YesIntent') {
+            return HelpIntentHandler.handle(handlerInput);
+        } else {
+            const possibleAnswers = attributes.currentQuestion.answers || [attributes.currentQuestion.answer];
+            const correctAnswer = possibleAnswers[0];
+            
+            let speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">De acuerdo. La respuesta correcta era: ${correctAnswer}. </prosody></voice>`;
+
+            if (attributes.gameState === gameStates.INDIVIDUAL_QUESTION) {
+                attributes.currentPlayerIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;
+                attributes.currentPlayerName = attributes.players[attributes.currentPlayerIndex].name;
+                
+                speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¿Listos para la siguiente pregunta?</prosody></voice>`;
+                
+                attributes.expectingContinueConfirmation = true;
+                attributesManager.setSessionAttributes(attributes);
+                
+                return handlerInput.responseBuilder
+                    .speak(speakOutput)
+                    .reprompt("¿Listos para continuar con la siguiente pregunta?")
+                    .getResponse();
+                
+            } else if (attributes.gameState === gameStates.TEAM_QUESTION) {
+                attributes.currentPlayerIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;
+                attributes.currentPlayerName = attributes.players[attributes.currentPlayerIndex].name;
+                attributes.gameState = gameStates.INDIVIDUAL_QUESTION; 
+                
+                speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¿Listos para continuar?</prosody></voice>`;
+                
+                attributes.expectingContinueConfirmation = true;
+                attributesManager.setSessionAttributes(attributes);
+                
+                return handlerInput.responseBuilder
+                    .speak(speakOutput)
+                    .reprompt("¿Listos para continuar?")
+                    .getResponse();
+                
+            } else if (attributes.gameState === gameStates.FINAL_TEAM_QUESTION) {
+                attributes.gameState = gameStates.SHOW_RANKING;
+                attributesManager.setSessionAttributes(attributes);
+                
+                aplUtils.showRanking(handlerInput, attributes.players);
+                
+                const sortedPlayers = [...attributes.players].sort((a, b) => b.score - a.score);
+                let rankingMessage = "";
+                
+                if (sortedPlayers.length === 1) {
+                    rankingMessage += `¡${sortedPlayers[0].name}, has conseguido ${sortedPlayers[0].score} puntos! `;
+                } else {
+                    const topScore = sortedPlayers[0].score;
+                    const topPlayers = sortedPlayers.filter(p => p.score === topScore);
+                    
+                    if (topPlayers.length > 1) {
+                        const names = topPlayers.map(p => p.name).join(' y ');
+                        rankingMessage += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡${names} habéis empatado en primer lugar con ${topScore} puntos! </prosody></voice>`;
+                    } else {
+                        rankingMessage += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡${topPlayers[0].name} lidera con ${topScore} puntos! </prosody></voice>`;
+                    }
+
+                    const otherPlayers = sortedPlayers.filter(p => p.score < topScore);
+                    if (otherPlayers.length > 0) {
+                        rankingMessage += `<voice name="${voiceConfig.voice}"><prosody rate="slow">Aquí están los demás resultados: </prosody></voice>`;
+                        rankingMessage += otherPlayers.map(p => `<voice name="${voiceConfig.voice}"><prosody rate="slow">${p.name} con ${p.score} puntos</prosody></voice>`).join(', ') + '. ';
+                    }
+                }
+                
+                speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">Vamos a ver los recuerdos que habéis evocado hoy. </prosody></voice>` + 
+                              rankingMessage + 
+                              `<voice name="${voiceConfig.voice}"><prosody rate="slow">¿Queréis jugar otra partida?</prosody></voice>`;
+                
+                attributes.gameState = gameStates.ASKING_FOR_NEW_GAME;
+                attributesManager.setSessionAttributes(attributes);
+                
+                return handlerInput.responseBuilder
+                    .speak(speakOutput)
+                    .reprompt("¿Queréis jugar otra partida?")
+                    .getResponse();
+            }
+        }
+    }
+};
+
 module.exports = {
     HelpIntentHandler,
     StartGameIntentHandler,
@@ -808,5 +978,7 @@ module.exports = {
     FinalTeamQuestionHandler,
     SamePlayersHandler,
     NewGameDecisionHandler,
-    SessionEndedRequestHandler
+    SessionEndedRequestHandler,
+    PassQuestionIntentHandler,      
+    HintOfferResponseHandler 
 };

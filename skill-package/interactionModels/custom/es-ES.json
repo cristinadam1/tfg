@@ -189,7 +189,7 @@
             ]
           },
           {
-            "name": "PassQuestion",
+            "name": "PassQuestionIntent",
             "samples": [
               "quiero pasar de pregunta",
               "no me se la respuesta",

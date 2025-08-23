@@ -35,9 +35,6 @@
           {
             "name": "HelpIntent",
             "samples": [
-              "no sé",
-              "nose",
-              "no lo sé",
               "ayúdame",
               "necesito ayuda",
               "necesito más ayuda",
@@ -189,6 +186,20 @@
               "otra vez por favor",
               "no he entendido eso",
               "no te he escuchado"
+            ]
+          },
+          {
+            "name": "PassQuestion",
+            "samples": [
+              "quiero pasar de pregunta",
+              "no me se la respuesta",
+              "no se",
+              "no lo se",
+              "paso pregunta",
+              "ni idea",
+              "no sé",
+              "nose",
+              "no lo sé"
             ]
           },
           {

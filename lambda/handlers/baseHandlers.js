@@ -407,6 +407,7 @@ const GetPlayerNameIntentHandler = {
             
             const responseMessages = [
                 `Encantada de conocerte, ${playerName}.`,
+                `Nos lo vamos a pasar genial, ${playerName}.`,
                 `¡Qué nombre tan bonito ${playerName}!`,
                 `Es un placer conocerte, ${playerName}.`,
                 `¡Es un placer tenerte hoy aquí, ${playerName}!`

@@ -25,6 +25,9 @@ const LaunchRequestHandler = {
         attributes.gameState = gameStates.REGISTERING_PLAYER_COUNT;
         attributes.players = [];
         attributes.currentPlayer = 1;
+        attributes.roundNumber = 1;
+        attributes.questionsPerRound = 2; 
+        attributes.currentRoundType = 'individual';
         
         handlerInput.attributesManager.setSessionAttributes(attributes);
 
@@ -158,10 +161,9 @@ const GetFavoriteSongIntentHandler = {
             
             let speakOutput;
             if (url) {
-                const message = `¡Buena elección! Aquí tienes un fragmento de ${songName}. ${nextPlayer.name}, ¿y cuál es tu canción favorita?`;
-                speakOutput = `<speak>${generateSpeech(message)} <audio src="${url}"/></speak>`;
+                speakOutput = `<speak>${generateSpeech('¡Buena elección! Aquí tienes tu canción:')} <audio src="${url}"/> <break time="2s"/> ${generateSpeech(`${nextPlayer.name}, ¿y cuál es tu canción favorita?`)}</speak>`;
             } else {
-                speakOutput = generateSpeech(`No conozco la canción ${songName} pero seguro que me encantaría. Para el próximo día me la aprenderé. ${nextPlayer.name}, ¿cuál es tu canción favorita?`);
+                speakOutput = generateSpeech(`No conozco la canción ${songName} pero seguro que me encantaría. ${nextPlayer.name}, ¿y cuál es tu canción favorita?`);
             }
             
             const repromptOutput = generateSpeech(`${nextPlayer.name}, ¿cuál es tu canción favorita?`);
@@ -170,6 +172,7 @@ const GetFavoriteSongIntentHandler = {
                 .speak(speakOutput)
                 .reprompt(repromptOutput)
                 .getResponse();
+                
         } else {
             attributes.gameState = gameStates.GAME_STARTED;
             handlerInput.attributesManager.setSessionAttributes(attributes);
@@ -191,10 +194,9 @@ const GetFavoriteSongIntentHandler = {
             
             let speakOutput;
             if (url) {
-                const message = `¡Buena elección! Aquí tienes un fragmento de ${songName}. ¡Y con esto ya tenemos todas vuestras canciones favoritas! ¿Listos para empezar el juego?`;
-                speakOutput = `<speak>${generateSpeech(message)} <audio src="${url}"/></speak>`;
+                speakOutput = `<speak>${generateSpeech('¡Buena elección! Aquí tienes tu canción:')} <audio src="${url}"/> <break time="2s"/> ${generateSpeech('¡Y con esto ya tenemos todas vuestras canciones favoritas! ¿Listos para empezar el juego?')}</speak>`;
             } else {
-                speakOutput = generateSpeech(`No conozco la canción ${songName}, pero seguro que está muy chula. Para el próximo día me la aprenderé. ¿Listos para empezar el juego?`);
+                speakOutput = generateSpeech(`No conozco la canción ${songName}, pero seguro que está muy chula. ¡Y con esto ya tenemos todas vuestras canciones favoritas! ¿Listos para empezar el juego?`);
             }
             
             const repromptOutput = generateSpeech('¿Queréis empezar el juego?');
@@ -352,7 +354,10 @@ const GetPlayerNameIntentHandler = {
         attributes.players.push({
             name: playerName.trim(),
             score: 0,
-            favoriteSong: null
+            correctAnswers: 0,
+            teamCorrectAnswers: 0,
+            favoriteSong: null,
+            questionsAnswered: 0
         });
 
         if (attributes.currentPlayer >= attributes.playerCount) {
@@ -407,6 +412,7 @@ const GetPlayerNameIntentHandler = {
             
             const responseMessages = [
                 `Encantada de conocerte, ${playerName}.`,
+                `Nos lo vamos a pasar genial, ${playerName}.`,
                 `¡Qué nombre tan bonito ${playerName}!`,
                 `Es un placer conocerte, ${playerName}.`,
                 `¡Es un placer tenerte hoy aquí, ${playerName}!`

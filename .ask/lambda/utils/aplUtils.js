@@ -1,6 +1,7 @@
 const Alexa = require('ask-sdk-core');
 const staticImageDocument = require('../apl/staticImage.json');
 const questionScreenDocument = require('../apl/questionScreen.json');
+const rankingScreenDocument = require('../apl/rankingScreen.json');
 
 function supportsAPL(handlerInput) {
     try {
@@ -57,8 +58,33 @@ function showQuestionWithImage(handlerInput, questionData) {
     }
 }
 
+function showRanking(handlerInput, players) {
+    if (supportsAPL(handlerInput)) {
+        const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+        
+        console.log('Mostrando ranking con jugadores:', JSON.stringify(sortedPlayers, null, 2));
+        
+        const playersForDisplay = sortedPlayers.map(player => ({
+            name: String(player.name || "Jugador").toUpperCase(),
+            score: player.score || 0
+        }));
+        
+        handlerInput.responseBuilder.addDirective({
+            type: 'Alexa.Presentation.APL.RenderDocument',
+            version: '2023.3',
+            document: rankingScreenDocument,
+            datasources: {
+                "data": {
+                    "players": playersForDisplay
+                }
+            }
+        });
+    }
+}
+
 module.exports = {
     supportsAPL,
     showStaticImage,
-    showQuestionWithImage  
+    showQuestionWithImage,
+    showRanking  
 };

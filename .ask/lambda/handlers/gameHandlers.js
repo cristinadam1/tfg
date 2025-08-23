@@ -12,7 +12,7 @@ const getRandomFeedback = (isCorrect, correctAnswer, voiceConfig) => {
         const positiveFeedback = ["¡Excelente!", "¡Muy bien!", "¡Correcto!", "¡Qué bien se te da esto!", "¡Respuesta correcta!"];
         return positiveFeedback[Math.floor(Math.random() * positiveFeedback.length)];
     }
-    return `<voice name="${voiceConfig.voice}"><prosody rate="slow">Casi. La respuesta correcta era ${correctAnswer}</prosody></voice>`;
+    return `<voice name="${voiceConfig.voice}"><prosody rate="slow">Casi. La respuesta correcta era ${correctAnswer}.</prosody></voice>`;
 };
 
 const verifySessionAttributes = (attributes) => {
@@ -326,6 +326,8 @@ const FinalTeamQuestionHandler = {
                     }
                 }
 
+                aplUtils.showRanking(handlerInput, attributes.players);
+
                 const feedback = isCorrect ? 
                     `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡Respuesta correcta! Todos ganáis puntos extra.</prosody></voice>` : 
                     getRandomFeedback(false, possibleAnswers[0], voiceConfig);
@@ -348,8 +350,8 @@ const FinalTeamQuestionHandler = {
 
                     const otherPlayers = sortedPlayers.filter(p => p.score < topScore);
                     if (otherPlayers.length > 0) {
-                        rankingMessage += `Aquí están los demás resultados: `;
-                        rankingMessage += otherPlayers.map(p => `${p.name} con ${p.score} puntos`).join(', ') + '. ';
+                        rankingMessage += `<voice name="${voiceConfig.voice}"><prosody rate="slow">Aquí están los demás resultados: </prosody></voice>`;
+                        rankingMessage += otherPlayers.map(p => `<voice name="${voiceConfig.voice}"><prosody rate="slow">${p.name} con ${p.score} puntos</prosody></voice>`).join(', ') + '. ';
                     }
                 }
 
@@ -472,7 +474,7 @@ const NewGameDecisionHandler = {
 
             if (intentName === 'AMAZON.NoIntent') {
                 const farewellMessages = [
-                    "¡Ha sido un placer jugar con vosotros! Espero que hayáis recordado buenos momentos.",
+                    "¡Ha sido un placer jugar con vosotros! Espero que hayáis recordado buenos momentos, hasta la próxima.",
                     "¡Hasta la próxima! Me ha encantado jugar con vosotros.",
                     "¡Gracias por jugar! No olvidéis seguir creando buenos recuerdos."
                 ];

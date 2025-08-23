@@ -435,7 +435,7 @@ module.exports = {
       photo: "vals.png"
     },
     {
-      question: "¿Qué bebida alcohólica española se obtiene de la uva y se suele servir en copas pequeñas?",
+      question: "¿Qué bebida alcohólica española se obtiene de la uva y se suele servir en una copa?",
       answer: "Vino",
       hints: ["Empieza por la letra V", "Puede ser tinto, blanco o rosado", "Es una bebida que se toma en comidas y celebraciones"],
       difficulty: 1,

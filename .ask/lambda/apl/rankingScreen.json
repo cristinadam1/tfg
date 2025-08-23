@@ -1,0 +1,94 @@
+{
+    "type": "APL",
+    "version": "2023.3",
+    "import": [
+      {
+        "name": "alexa-layouts",
+        "version": "1.7.0"
+      }
+    ],
+    "mainTemplate": {
+      "parameters": ["payload"],
+      "items": [
+        {
+          "type": "Container",
+          "width": "100vw",
+          "height": "100vh",
+          "backgroundColor": "#232f3e",
+          "padding": "@spacingLarge",
+          "items": [
+            {
+              "type": "Text",
+              "text": "🏆 RANKING FINAL 🏆",
+              "color": "#FFD700",
+              "fontSize": "10vh",
+              "fontWeight": "bold",
+              "textAlign": "center",
+              "width": "100%",
+              "paddingBottom": "4vh"
+            },
+            {
+              "type": "Container",
+              "width": "100%",
+              "height": "82vh",
+              "items": [
+                {
+                  "type": "Sequence",
+                  "id": "rankingList",
+                  "data": "${payload.data.players}",
+                  "width": "100%",
+                  "height": "100%",
+                  "items": [
+                    {
+                      "type": "Container",
+                      "width": "100%",
+                      "direction": "row",
+                      "padding": "2vh",
+                      "backgroundColor": "${index % 2 === 0 ? '#34495e' : '#2c3e50'}",
+                      "alignItems": "center",
+                      "justifyContent": "space-between",
+                      "items": [
+                        {
+                          "type": "Text",
+                          "text": "${index == 0 ? '🥇' : index == 1 ? '🥈' : index == 2 ? '🥉' : index + 1}",
+                          "color": "#FFD700",
+                          "fontSize": "6vh",
+                          "fontWeight": "bold",
+                          "width": "auto",
+                          "minWidth": "15%",
+                          "textAlign": "center"
+                        },
+                        {
+                          "type": "Text",
+                          "text": "${data.name}",
+                          "color": "white",
+                          "fontSize": "5vh",
+                          "fontWeight": "bold",
+                          "width": "auto",
+                          "maxWidth": "60%",
+                          "textAlign": "left",
+                          "paddingHorizontal": "2vh",
+                          "textOverflow": "ellipsis",
+                          "numberOfLines": 1
+                        },
+                        {
+                          "type": "Text",
+                          "text": "${data.score} PTS",
+                          "color": "#00FF7F",
+                          "fontSize": "5vh",
+                          "fontWeight": "bold",
+                          "width": "auto",
+                          "minWidth": "25%",
+                          "textAlign": "right"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }

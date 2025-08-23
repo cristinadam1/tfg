@@ -9,7 +9,7 @@ module.exports = {
   getVoiceConfig: function(role) {
     const roles = {
       MORNING: {
-        voice: "Conchita", 
+        voice: "Lucia", 
         greeting: "<prosody rate='slow' volume='soft'>¡Buenos días! Bienvenidos a una mañana de recuerdos</prosody>",
         style: "<prosody rate='slow' pitch='+5%'>" 
       },

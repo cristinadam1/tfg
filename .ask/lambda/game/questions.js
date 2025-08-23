@@ -68,7 +68,7 @@ module.exports = {
     {
       question: "¿Qué ciudad italiana es famosa por sus canales y góndolas?",
       answer: "Venecia",
-      hints: ["Se mueve en góndolas", "Está construida sobre el agua", "Empieza por la letra V"],
+      hints: ["Está construida sobre el agua", "Empieza por la letra V"],
       difficulty: 1,
       photo: "venecia.png"
     },

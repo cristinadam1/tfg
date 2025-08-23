@@ -1,6 +1,5 @@
 const Alexa = require('ask-sdk-core');
 const baseHandlers = require('./handlers/baseHandlers');
-const dbHandlers = require('./handlers/dbHandlers');
 const gameHandlers = require('./handlers/gameHandlers');
 
 console.log('Skill iniciada - Versión:', process.env.AWS_LAMBDA_FUNCTION_VERSION);

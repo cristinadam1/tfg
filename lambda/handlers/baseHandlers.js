@@ -56,14 +56,16 @@ const GameExplanationHandler = {
         
         if (intentName === 'AMAZON.YesIntent') {
             const explanation = generateSpeech(
-                '¡Perfecto! Os explico cómo jugar a "Regreso al Pasado". ' +
-                'Es un juego de preguntas para que recordemos tiempos pasados. ' +
+                '¡Perfecto! Encantada de conoceros, mi nombre es Alexa' +
+                'Os explico cómo jugar a "Regreso al Pasado". ' +
+                'Es un juego de preguntas para que recordemos tiempos pasados y nos divirtamos un rato todos juntos. ' +
                 'Primero, me diréis cuántos sois y vuestros nombres. ' +
                 'Luego, cada uno me dirá su canción favorita para conoceros un poco mejor ' +
                 'Después comenzarán las preguntas: algunas individuales y otras en equipo. ' +
                 'Para responder, debéis decir "creo que es" seguido de vuestra respuesta. ' +
                 'Si no sabéis una respuesta, podéis pedir ayuda diciendo "ayuda" o "necesito ayuda". ' +
                 'Al final, veremos quién ha recordado más momentos del pasado. ' +
+                'Y muy importante, no olvideis que si me quedo dormida debeis llamarme por mi nombre que es Alexa para que os escuche' +
                 '¿Qué os parece? ¡Vamos a empezar! ¿Cuántos jugadores sois hoy?'
             );
             

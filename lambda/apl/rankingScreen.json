@@ -50,7 +50,7 @@
                       "items": [
                         {
                           "type": "Text",
-                          "text": "${index == 0 ? '🥇' : index == 1 ? '🥈' : index == 2 ? '🥉' : index + 1}",
+                          "text": "${data.medal}",
                           "color": "#FFD700",
                           "fontSize": "6vh",
                           "fontWeight": "bold",

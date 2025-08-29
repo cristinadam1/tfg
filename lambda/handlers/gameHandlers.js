@@ -779,7 +779,7 @@ async function askNextQuestion(handlerInput, voiceConfig) {
         
         attributesManager.setSessionAttributes(attributes);
         
-        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">La siguiente pregunta es para ${attributes.currentPlayerName}. ${question.question}</prosody></voice>`;
+        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">La siguiente pregunta es para ${attributes.currentPlayerName}. ${question.question}. Debes decirme "Creo que es ..."</prosody></voice>`;
         
         aplUtils.showQuestionWithImage(handlerInput, question);
 
@@ -816,7 +816,7 @@ function startFinalTeamQuestion(handlerInput, voiceConfig) {
 
         aplUtils.showQuestionWithImage(handlerInput, finalQuestion);
         
-        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡Pregunta final grupal! ${finalQuestion.question} Trabajad juntos para dar la mejor respuesta.</prosody></voice>`;
+        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡Pregunta final grupal! Elegid entre todos la respuesta. ${finalQuestion.question} Debeis decirme: "Creo que es ..."</prosody></voice>`;
         
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -894,7 +894,7 @@ const HintOfferResponseHandler = {
             const possibleAnswers = attributes.currentQuestion.answers || [attributes.currentQuestion.answer];
             const correctAnswer = possibleAnswers[0];
             
-            let speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">De acuerdo. La respuesta correcta era: ${correctAnswer}. </prosody></voice>`;
+            let speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">No pasa nada. La respuesta correcta era: ${correctAnswer}.¡A la siguiente! </prosody></voice>`;
 
             if (attributes.gameState === gameStates.INDIVIDUAL_QUESTION) {
                 attributes.currentPlayerIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;

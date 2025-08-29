@@ -62,12 +62,27 @@ function showRanking(handlerInput, players) {
     if (supportsAPL(handlerInput)) {
         const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
         
-        console.log('Mostrando ranking con jugadores:', JSON.stringify(sortedPlayers, null, 2));
+        let currentRank = 1;
+        const playersWithRanking = sortedPlayers.map((player, index) => {
+            if (index > 0 && player.score < sortedPlayers[index - 1].score) {
+                currentRank = index + 1;
+            }
+            
+            let medal;
+            if (currentRank === 1) medal = '🥇';
+            else if (currentRank === 2) medal = '🥈';
+            else if (currentRank === 3) medal = '🥉';
+            else medal = currentRank.toString();
+            
+            return {
+                name: String(player.name || "Jugador").toUpperCase(),
+                score: player.score || 0,
+                position: currentRank,
+                medal: medal
+            };
+        });
         
-        const playersForDisplay = sortedPlayers.map(player => ({
-            name: String(player.name || "Jugador").toUpperCase(),
-            score: player.score || 0
-        }));
+        console.log('Ranking calculado:', JSON.stringify(playersWithRanking, null, 2));
         
         handlerInput.responseBuilder.addDirective({
             type: 'Alexa.Presentation.APL.RenderDocument',
@@ -75,7 +90,7 @@ function showRanking(handlerInput, players) {
             document: rankingScreenDocument,
             datasources: {
                 "data": {
-                    "players": playersForDisplay
+                    "players": playersWithRanking
                 }
             }
         });

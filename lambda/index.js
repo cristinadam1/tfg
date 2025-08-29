@@ -8,6 +8,7 @@ process.env.ASK_DEBUG = 'true';
 exports.handler = Alexa.SkillBuilders.custom()
     .addRequestHandlers(
         baseHandlers.LaunchRequestHandler,
+        baseHandlers.GameExplanationHandler,
         baseHandlers.SessionEndedRequestHandler,
         baseHandlers.FallbackIntentHandler,
         baseHandlers.PlayerCountIntentHandler,

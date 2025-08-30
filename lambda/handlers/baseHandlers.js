@@ -56,17 +56,18 @@ const GameExplanationHandler = {
         
         if (intentName === 'AMAZON.YesIntent') {
             const explanation = generateSpeech(
-                '¡Perfecto! Encantada de conoceros, mi nombre es Alexa.' +
+                '¡Perfecto! Encantada de conoceros, mi nombre es Alexa. ' +
                 'Os explico cómo jugar a "Regreso al Pasado". ' +
                 'Es un juego de preguntas, para que recordemos tiempos pasados, y nos divirtamos un rato todos juntos. ' +
                 'Primero, me diréis cuántos sois y vuestros nombres. ' +
-                'Luego, cada uno me dirá su canción favorita para conoceros un poco mejor ' +
+                'Luego, cada uno me dirá su canción favorita para conoceros un poco mejor. ' +
                 'Después comenzarán las preguntas: algunas individuales y otras en equipo. ' +
-                'Para responder, debéis decir "creo que es" seguido de vuestra respuesta. ' +
+                'Para responder, debéis decir "la respuesta es", seguido de vuestra respuesta. ' +
                 'Si no sabéis una respuesta, podéis pedir ayuda diciendo "ayuda" o "necesito ayuda". ' +
+                'Pero recordad que solo pueden hablar los jugadores a los que les toque. ' +
                 'Al final, veremos quién ha recordado más momentos del pasado. ' +
-                'Y muy importante, no olvideis que si me quedo dormida, debeis llamarme por mi nombr, que es Alexa, para que os escuche' +
-                '¿Qué os parece.? ¡Vamos a empezar.! ¿Cuántos jugadores sois hoy?'
+                'Y muy importante, si me quedo dormida, debeis llamarme por mi nombre, que es Alexa, para que os escuche. ' +
+                '¡Vamos a empezar.! ¿Cuántos jugadores sois hoy?'
             );
             
             return handlerInput.responseBuilder
@@ -166,7 +167,7 @@ const GetFavoriteSongIntentHandler = {
         const currentPlayerName = attributes.players[attributes.currentPlayer].name;
         
         if (intentName !== 'GetFavoriteSongIntent') {
-            const speakOutput = generateSpeech('Perdona, creo que no te he entendido. Debes decirme el nombre de una canción. Por ejemplo: "mi canción favorita es Libre"');
+            const speakOutput = generateSpeech('Tienes que decirme el nombre de una canción, empezando diciendo "mi cancion favorita es", seguido del nombre de la canción.');
             const repromptOutput = generateSpeech(`${currentPlayerName}, ¿cuál es tu canción favorita? Por ejemplo: "mi canción es quisiera volverme hiedra"`);
             
             return handlerInput.responseBuilder
@@ -300,9 +301,9 @@ const GetFavoriteSongIntentHandler = {
             let speakOutput;
             if (url) {
                 if (usedRandomSong) {
-                    speakOutput = `<speak>${generateSpeech(`No conozco la canción ${trimmedSongName}, pero aquí tienes "${randomSongName}" para ambientar. ¡Disfrútala!`)} <audio src="${url}"/> <break time="2s"/> ${generateSpeech('¡Y con esto ya tenemos todas vuestras canciones favoritas! ¿Listos para empezar el juego?')}</speak>`;
+                    speakOutput = `<speak>${generateSpeech(`No conozco la canción ${trimmedSongName}, pero aquí tienes "${randomSongName}" para ambientar. ¡Disfrútala!`)} <audio src="${url}"/> <break time="2s"/> ${generateSpeech('Ahora que nos conocemos un poco mejor, ¿estais Listos para empezar el juego?')}</speak>`;
                 } else {
-                    speakOutput = `<speak>${generateSpeech('¡Buena elección! Aquí tienes tu canción:')} <audio src="${url}"/> <break time="2s"/> ${generateSpeech('¡Y con esto ya tenemos todas vuestras canciones favoritas! ¿Listos para empezar el juego?')}</speak>`;
+                    speakOutput = `<speak>${generateSpeech('¡Buena elección! Aquí tienes tu canción:')} <audio src="${url}"/> <break time="2s"/> ${generateSpeech('Ahora que nos conocemos un poco mejor, ¿estais listos para empezar el juego?')}</speak>`;
                 }
             } else {
                 speakOutput = generateSpeech(`No conozco la canción ${trimmedSongName} y no tengo otras canciones disponibles. ¡Pero con esto ya tenemos todas vuestras canciones favoritas! ¿Listos para empezar el juego?`);

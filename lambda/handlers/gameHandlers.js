@@ -126,7 +126,7 @@ const IndividualQuestionHandler = {
             }
             
             return handlerInput.responseBuilder
-                .speak("Perdona, no te he entendido bien. ¿Puedes repetirlo? Debes decir creo que es")
+                .speak("Perdona, no te he entendido bien. ¿Puedes repetirlo? Debes decir: La respuesta es")
                 .reprompt("¿Cuál es tu respuesta?")
                 .getResponse();
         } catch (error) {
@@ -271,20 +271,41 @@ function startTeamQuestion(handlerInput, voiceConfig) {
         
         verifySessionAttributes(attributes);
         
-        attributes.gameState = gameStates.TEAM_QUESTION;
+        const availableCategories = Object.keys(questions).filter(cat => cat !== 'FINAL');
+        
+        if (availableCategories.length === 0) {
+            return startFinalTeamQuestion(handlerInput, voiceConfig);
+        }
+        
+        if (!attributes.currentCategory || 
+            !questions[attributes.currentCategory] || 
+            questions[attributes.currentCategory].filter(q => !attributes.questionsAsked.includes(q.question)).length === 0) {
+            
+            attributes.currentCategory = availableCategories[Math.floor(Math.random() * availableCategories.length)];
+            attributes.questionsAsked = [];
+        }
         
         const questionsLeft = questions[attributes.currentCategory].filter(q => 
             !attributes.questionsAsked.includes(q.question)
         );
         
         if (questionsLeft.length === 0) {
-            return handleGameEnd(handlerInput);
+            const remainingCategories = availableCategories.filter(cat => cat !== attributes.currentCategory);
+            
+            if (remainingCategories.length === 0) {
+                return handleGameEnd(handlerInput);
+            }
+            
+            attributes.currentCategory = remainingCategories[Math.floor(Math.random() * remainingCategories.length)];
+            attributes.questionsAsked = [];
+            questionsLeft = questions[attributes.currentCategory];
         }
         
         const question = questionsLeft[0];
         
         attributes.currentQuestion = question;
         attributes.questionsAsked.push(question.question);
+        attributes.gameState = gameStates.TEAM_QUESTION;
         attributesManager.setSessionAttributes(attributes);
         
         const teammateIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;
@@ -750,12 +771,26 @@ async function askNextQuestion(handlerInput, voiceConfig) {
             return startFinalTeamQuestion(handlerInput, voiceConfig);
         }
         
+        const availableCategories = Object.keys(questions).filter(cat => cat !== 'FINAL');
+        
+        if (availableCategories.length === 0) {
+            return startFinalTeamQuestion(handlerInput, voiceConfig);
+        }
+        
+        if (!attributes.currentCategory || 
+            !questions[attributes.currentCategory] || 
+            questions[attributes.currentCategory].filter(q => !attributes.questionsAsked.includes(q.question)).length === 0) {
+            
+            attributes.currentCategory = availableCategories[Math.floor(Math.random() * availableCategories.length)];
+            attributes.questionsAsked = [];
+        }
+        
         let questionsLeft = questions[attributes.currentCategory].filter(q => 
             !attributes.questionsAsked.includes(q.question)
         );
         
         if (questionsLeft.length === 0) {
-            const remainingCategories = Object.keys(questions).filter(cat => cat !== attributes.currentCategory);
+            const remainingCategories = availableCategories.filter(cat => cat !== attributes.currentCategory);
             
             if (remainingCategories.length === 0) {
                 return startFinalTeamQuestion(handlerInput, voiceConfig);
@@ -779,7 +814,7 @@ async function askNextQuestion(handlerInput, voiceConfig) {
         
         attributesManager.setSessionAttributes(attributes);
         
-        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">La siguiente pregunta es para ${attributes.currentPlayerName}. ${question.question}. Debes decirme "Creo que es ..."</prosody></voice>`;
+        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">La siguiente pregunta es para ${attributes.currentPlayerName}. ${question.question}. Debes decirme "La respuesta es ..."</prosody></voice>`;
         
         aplUtils.showQuestionWithImage(handlerInput, question);
 
@@ -816,7 +851,7 @@ function startFinalTeamQuestion(handlerInput, voiceConfig) {
 
         aplUtils.showQuestionWithImage(handlerInput, finalQuestion);
         
-        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡Pregunta final grupal! Elegid entre todos la respuesta. ${finalQuestion.question} Debeis decirme: "Creo que es ..."</prosody></voice>`;
+        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡Pregunta final grupal! Elegid entre todos la respuesta. ${finalQuestion.question} Debeis decirme: "La respuesta es ..."</prosody></voice>`;
         
         return handlerInput.responseBuilder
             .speak(speakOutput)

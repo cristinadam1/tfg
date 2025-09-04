@@ -73,7 +73,7 @@
                         },
                         {
                           "type": "Text",
-                          "text": "${data.score} PTS",
+                          "text": "${data.score} REC",
                           "color": "#00FF7F",
                           "fontSize": "5vh",
                           "fontWeight": "bold",

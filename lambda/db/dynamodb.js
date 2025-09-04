@@ -63,9 +63,13 @@ module.exports = {
     async getSongUrl(nombre) {
         const params = {
             TableName: SONGS_TABLE,
-            Key: { nombre }
+            Key: { nombre },
+            ProjectionExpression: 'nombre, #urlField',
+            ExpressionAttributeNames: {
+                '#urlField': 'url'
+            }
         };
-
+    
         try {
             const result = await dynamodb.get(params).promise();
             return result.Item ? result.Item.url : null;
@@ -73,5 +77,41 @@ module.exports = {
             console.error('Error al consultar la canción:', error);
             return null;
         }
+    },
+    async getRandomSong() {
+        try {
+            console.log('Buscando canción aleatoria...');
+            const params = {
+                TableName: SONGS_TABLE,
+                ProjectionExpression: 'nombre, #urlField',
+                ExpressionAttributeNames: {
+                    '#urlField': 'url'  
+                }
+            };
+            
+            console.log('Params para scan:', params);
+            const result = await dynamodb.scan(params).promise();
+            console.log('Resultado del scan:', JSON.stringify(result, null, 2));
+            
+            if (result.Items && result.Items.length > 0) {
+                console.log(`Se han encontrado ${result.Items.length} canciones`);
+                const randomIndex = Math.floor(Math.random() * result.Items.length);
+                const randomSong = result.Items[randomIndex];
+                console.log(`Canción aleatoria seleccionada: ${JSON.stringify(randomSong)}`);
+                
+                return {
+                    name: randomSong.nombre,
+                    url: randomSong.url  
+                };
+            }
+            
+            console.log('No se han encontrado canciones en la tabla');
+            return null;
+            
+        } catch (error) {
+            console.error('Error al obtener canción aleatoria:', error);
+            return null;
+        }
     }
+
 };

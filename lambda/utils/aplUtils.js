@@ -3,6 +3,7 @@ const staticImageDocument = require('../apl/staticImage.json');
 const welcomeLogoDocument = require('../apl/welcomeLogo.json');
 const questionScreenDocument = require('../apl/questionScreen.json');
 const rankingScreenDocument = require('../apl/rankingScreen.json');
+const welcomePlayerNameDocument = require('../apl/welcomePlayerName.json');
 
 
 function supportsAPL(handlerInput) {
@@ -37,6 +38,22 @@ function showStaticImage(handlerInput, message = "¡Bienvenidos/as a Regreso al 
             datasources: {
                 "data": {
                     "message": message
+                }
+            }
+        });
+    }
+}
+
+function showPlayerWelcome(handlerInput, playerName) {
+    if (supportsAPL(handlerInput)) {
+        const upperCaseName = playerName.toUpperCase();
+        handlerInput.responseBuilder.addDirective({
+            type: 'Alexa.Presentation.APL.RenderDocument',
+            version: '2023.3',
+            document: welcomePlayerNameDocument,
+            datasources: {
+                "data": {
+                    "playerName": upperCaseName
                 }
             }
         });
@@ -117,5 +134,6 @@ module.exports = {
     showWelcomeLogo,
     showStaticImage,
     showQuestionWithImage,
-    showRanking  
+    showRanking,
+    showPlayerWelcome 
 };

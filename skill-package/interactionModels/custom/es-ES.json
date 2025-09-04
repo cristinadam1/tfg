@@ -13,12 +13,29 @@
               "no quiero seguir",
               "no quiero segui",
               "quiero parar",
+              "para",
               "quiero para",
               "no me apetece seguir",
               "no me apetece segui",
               "déjalo aquí",
               "quiero salir",
               "quiero sali"
+            ]
+          },
+          {
+            "name": "PlayerNameForExitIntent",
+            "slots": [
+                {
+                    "name": "playerName",
+                    "type": "AMAZON.FirstName" 
+                }
+            ],
+            "samples": [
+                "quiero que {playerName} abandone",
+                "abandona {playerName}",
+                "que salga {playerName}",
+                "se quiere ir {playerName}",
+                "{playerName} quiere abandonar"
             ]
           },
           {
@@ -261,18 +278,6 @@
               "creemo que son la {answer}",
               "creemos que son los {answer}",
               "creemo que son lo {answer}"
-            ]
-          },
-          {
-            "name": "TeamAgreementIntent",
-            "slots": [],
-            "samples": [
-              "ya estamos de acuerdo",
-              "ya estamos listos",
-              "ya estamos",
-              "ya está",
-              "ya hemos decidido",
-              "hemos decidido"
             ]
           },
           {

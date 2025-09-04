@@ -19,7 +19,6 @@ exports.handler = Alexa.SkillBuilders.custom()
         gameHandlers.TeamQuestionHandler,
         gameHandlers.HelpIntentHandler,
         gameHandlers.FinalTeamQuestionHandler,
-        //gameHandlers.ShowRankingHandler,
         gameHandlers.NewGameDecisionHandler,
         gameHandlers.SamePlayersHandler,       
         gameHandlers.SessionEndedRequestHandler,

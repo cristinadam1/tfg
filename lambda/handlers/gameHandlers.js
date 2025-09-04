@@ -5,14 +5,22 @@ const gameStates = require('../game/gameStates');
 const { sendProgressiveResponse } = require('ask-sdk-core');
 const db = require('../db/dynamodb');
 const aplUtils = require('../utils/aplUtils');
+const questionUtils = require('../utils/questionUtils');
+const rankingUtils = require('../utils/rankingUtils');
+const ErrorHandler = require('../utils/errorHandler');
+
 
 const normalizeString = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+const generateSpeech = (text, voiceConfig) => {
+    return `<voice name="${voiceConfig.voice}"><prosody rate="slow">${text}</prosody></voice>`;
+};
+
 const getRandomFeedback = (isCorrect, correctAnswer, voiceConfig) => {
     if (isCorrect) {
         const positiveFeedback = ["¡Excelente!", "¡Muy bien!", "¡Correcto!", "¡Qué bien se te da esto!", "¡Respuesta correcta!"];
         return positiveFeedback[Math.floor(Math.random() * positiveFeedback.length)];
     }
-    return `<voice name="${voiceConfig.voice}"><prosody rate="slow">Casi. La respuesta correcta era ${correctAnswer}.</prosody></voice>`;
+    return  generateSpeech(`Casi. La respuesta correcta era ${correctAnswer}.`, voiceConfig);
 };
 
 const verifySessionAttributes = (attributes) => {
@@ -35,7 +43,6 @@ const StartGameIntentHandler = {
             return false;
         }
     },
-
     handle(handlerInput) {
         try {
             const { attributesManager } = handlerInput;
@@ -59,21 +66,17 @@ const StartGameIntentHandler = {
             
             const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
             
-            const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">` +
-                `¡Vamos a empezar! La primera pregunta es para ${attributes.currentPlayerName}. ` +
-                `${question.question}</prosody></voice>`;
+            const speakOutput = generateSpeech (`¡Vamos a empezar! La primera pregunta es para ${attributes.currentPlayerName}.
+                                                ${question.question}`, voiceConfig);
 
             aplUtils.showQuestionWithImage(handlerInput, question);
             
             return handlerInput.responseBuilder
                 .speak(speakOutput)
-                .reprompt(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`)
+                .reprompt(generateSpeech(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`, voiceConfig))
                 .getResponse();
         } catch (error) {
-            console.error('Error in StartGameIntentHandler handle:', error);
-            return handlerInput.responseBuilder
-                .speak('Ha habido un problema al iniciar el juego. Por favor, inténtalo de nuevo.')
-                .getResponse();
+            return ErrorHandler.handleStartGameError(handlerInput, error);
         }
     }
 };
@@ -126,33 +129,70 @@ const IndividualQuestionHandler = {
             }
             
             return handlerInput.responseBuilder
-                .speak("Perdona, no te he entendido bien. ¿Puedes repetirlo? Debes decir: La respuesta es")
-                .reprompt("¿Cuál es tu respuesta?")
+                .speak(generateSpeech(`Perdona, no te he entendido bien. ¿Puedes repetirlo? Debes decir: La respuesta es`, voiceConfig))
+                .reprompt(generateSpeech(`¿Cuál es tu respuesta?`, voiceConfig))
                 .getResponse();
         } catch (error) {
-            console.error('Error in IndividualQuestionHandler handle:', error);
-            
-            const attributes = handlerInput.attributesManager.getSessionAttributes();
-            const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
-            
-            let speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">` +
-                             `Ha habido un error al procesar tu respuesta. Vamos a intentarlo de nuevo. `;
-            
-            if (attributes.currentQuestion) {
-                speakOutput += `La pregunta era: ${attributes.currentQuestion.question}`;
-            } else {
-                speakOutput += `Por favor, responde a la pregunta.`;
-            }
-            
-            speakOutput += `</prosody></voice>`;
-            
-            return handlerInput.responseBuilder
-                .speak(speakOutput)
-                .reprompt("¿Cuál es tu respuesta?")
-                .getResponse();
+            return ErrorHandler.handleIndividualQuestionError(handlerInput, error);
         }
     }
 };
+
+async function askNextQuestion(handlerInput, voiceConfig) {
+    try {
+        const { attributesManager } = handlerInput;
+        const attributes = attributesManager.getSessionAttributes();
+        
+        verifySessionAttributes(attributes);
+        
+        if (!attributes.questionsPerPlayer) {
+            attributes.questionsPerPlayer = {};
+            attributes.players.forEach(player => {
+                attributes.questionsPerPlayer[player.name] = 0;
+            });
+        }
+        
+        attributes.questionsPerPlayer[attributes.currentPlayerName] = 
+            (attributes.questionsPerPlayer[attributes.currentPlayerName] || 0) + 1;
+        
+        const minQuestions = Math.min(...Object.values(attributes.questionsPerPlayer));
+        if (minQuestions >= 2) {
+            return startFinalTeamQuestion(handlerInput, voiceConfig);
+        }
+        
+        const question = questionUtils.getNextAvailableQuestion(attributes);
+        
+        if (!question) {
+            return startFinalTeamQuestion(handlerInput, voiceConfig);
+        }
+        
+        attributes.questionCounter = (attributes.questionCounter || 0) + 1;
+        
+        if (attributes.questionCounter % 3 === 0 && attributes.players.length > 1) {
+            return startTeamQuestion(handlerInput, voiceConfig);
+        }
+        
+        attributes.currentQuestion = question;
+        attributes.questionsAsked.push(question.question);
+        attributes.gameState = gameStates.INDIVIDUAL_QUESTION;
+        
+        attributesManager.setSessionAttributes(attributes);
+        
+        const speakOutput = generateSpeech(`La siguiente pregunta es para ${attributes.currentPlayerName}. ${question.question}. Debes decirme. La respuesta es ...`, voiceConfig);
+
+        aplUtils.showQuestionWithImage(handlerInput, question);
+
+        return handlerInput.responseBuilder
+            .speak(speakOutput)
+            .reprompt(generateSpeech(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`, voiceConfig))
+            .getResponse();
+    } catch (error) {
+        console.error('Error in askNextQuestion:', error);
+        return handlerInput.responseBuilder
+            .speak('Ha habido un problema al preparar la siguiente pregunta. Volviendo al inicio.')
+            .getResponse();
+    }
+}
 
 const TeamQuestionHandler = {
     canHandle(handlerInput) {
@@ -234,9 +274,9 @@ const TeamQuestionHandler = {
                 
                 console.log('[TeamQuestionHandler] Nuevo jugador actual:', attributes.currentPlayerName);
                 
-                const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">` +
-                    `${getRandomFeedback(isCorrect, possibleAnswers[0], voiceConfig)} ` +
-                    `¿Listos para continuar?</prosody></voice>`;
+                const speakOutput = generateSpeech(
+                                    `${getRandomFeedback(isCorrect, possibleAnswers[0], voiceConfig)} ¿Listos para continuar?`,
+                                    voiceConfig);
                 
                 return handlerInput.responseBuilder
                     .speak(speakOutput)
@@ -245,21 +285,17 @@ const TeamQuestionHandler = {
             }
             
             console.log('[TeamQuestionHandler] Intent no manejado:', intentName);
-            const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">` +
-                `Perdona, no te he entendido. ¿Podéis decirme vuestra respuesta? ` +
-                `La pregunta es: ${attributes.currentQuestion.question}</prosody></voice>`;
+            const speakOutput = generateSpeech(
+                `Perdonad, no os he entendido. Debeis decir La respuesta es, seguido de la respuesta. Por ejemplo, la respuesta es Francia. La pregunta es: ${attributes.currentQuestion.question}`,
+                voiceConfig);
             
             return handlerInput.responseBuilder
                 .speak(speakOutput)
-                .reprompt("¿Cuál es vuestra respuesta en equipo?")
+                .reprompt(generateSpeech(`¿Cuál es vuestra respuesta en equipo? Debeis decir La respuesta es, seguido de la respuesta. Por ejemplo, la respuesta es Francia.`, voiceConfig))
                 .getResponse();
                 
         } catch (error) {
-            console.error('[TeamQuestionHandler] Error en handle:', error);
-            const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
-            return handlerInput.responseBuilder
-                .speak(`<voice name="${voiceConfig.voice}"><prosody rate="slow">Ha habido un error en la pregunta grupal. Volviendo a preguntas individuales.</prosody></voice>`)
-                .getResponse();
+            return ErrorHandler.handleTeamQuestionError(handlerInput, error);
         }
     }
 };
@@ -271,37 +307,11 @@ function startTeamQuestion(handlerInput, voiceConfig) {
         
         verifySessionAttributes(attributes);
         
-        const availableCategories = Object.keys(questions).filter(cat => cat !== 'FINAL');
+        const question = questionUtils.getNextAvailableQuestion(attributes);
         
-        if (availableCategories.length === 0) {
+        if (!question) {
             return startFinalTeamQuestion(handlerInput, voiceConfig);
         }
-        
-        if (!attributes.currentCategory || 
-            !questions[attributes.currentCategory] || 
-            questions[attributes.currentCategory].filter(q => !attributes.questionsAsked.includes(q.question)).length === 0) {
-            
-            attributes.currentCategory = availableCategories[Math.floor(Math.random() * availableCategories.length)];
-            attributes.questionsAsked = [];
-        }
-        
-        const questionsLeft = questions[attributes.currentCategory].filter(q => 
-            !attributes.questionsAsked.includes(q.question)
-        );
-        
-        if (questionsLeft.length === 0) {
-            const remainingCategories = availableCategories.filter(cat => cat !== attributes.currentCategory);
-            
-            if (remainingCategories.length === 0) {
-                return handleGameEnd(handlerInput);
-            }
-            
-            attributes.currentCategory = remainingCategories[Math.floor(Math.random() * remainingCategories.length)];
-            attributes.questionsAsked = [];
-            questionsLeft = questions[attributes.currentCategory];
-        }
-        
-        const question = questionsLeft[0];
         
         attributes.currentQuestion = question;
         attributes.questionsAsked.push(question.question);
@@ -314,20 +324,14 @@ function startTeamQuestion(handlerInput, voiceConfig) {
         
         aplUtils.showQuestionWithImage(handlerInput, question);
 
-        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">` +
-            `¡Pregunta en equipo! ${currentPlayerName}, trabaja junto con ${teammateName}. ` +
-            `La pregunta es: ${question.question}</prosody></voice>`;
+        const speakOutput = generateSpeech(`¡Pregunta en equipo! ${currentPlayerName}, trabaja junto con ${teammateName}. La pregunta es: ${question.question}`,voiceConfig);
         
         return handlerInput.responseBuilder
             .speak(speakOutput)
             .reprompt("¿Cuál es vuestra respuesta en equipo? Si necesitas ayuda dime necesito ayuda")
             .getResponse();
     } catch (error) {
-        console.error('Error in startTeamQuestion:', error);
-        const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
-        return handlerInput.responseBuilder
-            .speak(`<voice name="${voiceConfig.voice}"><prosody rate="slow">Ha habido un problema al iniciar la pregunta grupal. Continuamos con preguntas individuales.</prosody></voice>`)
-            .getResponse();
+        return ErrorHandler.handleStartTeamQuestionError(handlerInput, error);
     }
 }
 
@@ -380,33 +384,10 @@ const FinalTeamQuestionHandler = {
                 aplUtils.showRanking(handlerInput, attributes.players);
 
                 const feedback = isCorrect ? 
-                    `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡Respuesta correcta! Todos ganáis puntos extra.</prosody></voice>` : 
-                    getRandomFeedback(false, possibleAnswers[0], voiceConfig);
+                                generateSpeech("¡Respuesta correcta! Todos ganáis recuerdos extra.", voiceConfig) : 
+                                getRandomFeedback(false, possibleAnswers[0], voiceConfig);
 
-                const sortedPlayers = [...attributes.players].sort((a, b) => b.score - a.score);
-                let rankingMessage = "";
-                
-                if (sortedPlayers.length === 1) {
-                    rankingMessage += `¡${sortedPlayers[0].name}, has conseguido ${sortedPlayers[0].score} puntos! `;
-                } else {
-                    const topScore = sortedPlayers[0].score;
-                    const topPlayers = sortedPlayers.filter(p => p.score === topScore);
-
-                    if (topPlayers.length > 1) {
-                        const names = topPlayers.map(p => p.name).join(' y ');
-                        rankingMessage += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡${names} habéis empatado en primer lugar con ${topScore} puntos! </prosody></voice>`;
-                    } else {
-                        rankingMessage += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡${topPlayers[0].name} lidera con ${topScore} puntos! </prosody></voice>`;
-                    }
-
-                    const otherPlayers = sortedPlayers.filter(p => p.score < topScore);
-                    if (otherPlayers.length > 0) {
-                        rankingMessage += `<voice name="${voiceConfig.voice}"><prosody rate="slow">Aquí están los demás resultados: </prosody></voice>`;
-                        rankingMessage += otherPlayers.map(p => `<voice name="${voiceConfig.voice}"><prosody rate="slow">${p.name} con ${p.score} puntos</prosody></voice>`).join(', ') + '. ';
-                    }
-                }
-
-                const speakOutput = feedback + `<voice name="${voiceConfig.voice}"><prosody rate="slow">Vamos a ver los recuerdos que habéis evocado hoy. </prosody></voice>` + rankingMessage + `<voice name="${voiceConfig.voice}"><prosody rate="slow">¿Queréis jugar otra partida?</prosody></voice>`;
+                const speakOutput = feedback + rankingUtils.getFullRankingAnnouncement(attributes.players);
 
                 attributes.gameState = gameStates.ASKING_FOR_NEW_GAME;
                 attributesManager.setSessionAttributes(attributes);
@@ -418,8 +399,8 @@ const FinalTeamQuestionHandler = {
             }
             
             return handlerInput.responseBuilder
-                .speak("Por favor, decidme vuestra respuesta conjunta.")
-                .reprompt("¿Cuál es vuestra respuesta como equipo?")
+                .speak(generateSpeech(`Por favor, decidme vuestra respuesta conjunta. Debeis empezar diciendo "La respuesta es".`, voiceConfig))
+                .reprompt(generateSpeech(`¿Cuál es vuestra respuesta como equipo?`, voiceConfig))
                 .getResponse();
                 
         } catch (error) {
@@ -429,7 +410,7 @@ const FinalTeamQuestionHandler = {
             attributesManager.setSessionAttributes(attributes);
             
             return handlerInput.responseBuilder
-                .speak("Vamos a ver los resultados.")
+                .speak(generateSpeech(`Vamos a ver los resultados.`, voiceConfig))
                 .withShouldEndSession(false)
                 .getResponse();
         }
@@ -454,8 +435,8 @@ const HelpIntentHandler = {
       const currentQuestion = attributes.currentQuestion;
       if (!currentQuestion || !currentQuestion.hints || currentQuestion.hints.length === 0) {
         return handlerInput.responseBuilder
-          .speak("Lo siento, no tengo pistas para esta pregunta. Intenta adivinarlo lo mejor que puedas.")
-          .reprompt(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`)
+          .speak(generateSpeech(`Lo siento, no tengo pistas para esta pregunta. Intenta adivinarlo lo mejor que puedas.`, voiceConfig))
+          .reprompt(generateSpeech(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`, voiceConfig))
           .getResponse();
       }
   
@@ -471,8 +452,8 @@ const HelpIntentHandler = {
       
       if (hintsUsedCount >= currentQuestion.hints.length) {
         return handlerInput.responseBuilder
-          .speak("¡Oh vaya! parece que te he dado todas las pistas que tengo para esta pregunta. ¡Intenta adivinarlo!")
-          .reprompt(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`)
+          .speak(generateSpeech(`¡Oh vaya! parece que te he dado todas las pistas que tengo para esta pregunta. ¡Intenta adivinarlo!`, voiceConfig))
+          .reprompt(generateSpeech(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`, voiceConfig))
           .getResponse();
       }
   
@@ -480,24 +461,24 @@ const HelpIntentHandler = {
       attributes.hintsUsed[currentQuestion.question] = hintsUsedCount + 1;
       attributesManager.setSessionAttributes(attributes);
   
-      let speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">Aquí tienes una pista: ${hint}.</prosody></voice>`;
+      let speakOutput = generateSpeech(`Aquí tienes una pista: ${hint}.`, voiceConfig);
       
       if (hintsUsedCount + 1 < currentQuestion.hints.length) {
-        speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡Si necesitas más ayuda, no dudes en pedirmela!. </prosody></voice>`;
+        speakOutput += generateSpeech(`¡Si necesitas más ayuda, no dudes en pedirmela!.`, voiceConfig);
       }
       
       let repromptMessage;
       if (attributes.gameState === gameStates.TEAM_QUESTION) {
         const teammateIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;
         const teammateName = attributes.players[teammateIndex].name;
-        speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">La pregunta era: ${currentQuestion.question}. ${attributes.currentPlayerName} y ${teammateName} teneis que trabajar juntos para encontrar la respuesta.</prosody></voice>`;
-        repromptMessage = "¿Cuál es vuestra respuesta en equipo?";
+        speakOutput += generateSpeech(`La pregunta era: ${currentQuestion.question}. ${attributes.currentPlayerName} y ${teammateName} teneis que trabajar juntos para encontrar la respuesta.`, voiceConfig);
+        repromptMessage = generateSpeech(`¿Cuál es vuestra respuesta en equipo?`, voiceConfig);
       } else if (attributes.gameState === gameStates.FINAL_TEAM_QUESTION) {
-        speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">La pregunta era: ${currentQuestion.question}. Trabajad todos juntos para encontrar la respuesta final.</prosody></voice>`;
-        repromptMessage = "¿Cuál es vuestra respuesta como equipo?";
+        speakOutput += generateSpeech(`La pregunta era: ${currentQuestion.question}.`, voiceConfig);
+        repromptMessage = generateSpeech(`¿Cuál es vuestra respuesta en equipo?`, voiceConfig);
       } else {
-        speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">La pregunta era: ${currentQuestion.question}. ¿Cuál crees que es la respuesta?</prosody></voice>`;
-        repromptMessage = `¿${attributes.currentPlayerName}, cuál es tu respuesta?`;
+        speakOutput += generateSpeech(`La pregunta era: ${currentQuestion.question}. ¿Cuál crees que es la respuesta?`, voiceConfig);
+        repromptMessage = generateSpeech(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`, voiceConfig);
       }
   
       return handlerInput.responseBuilder
@@ -545,7 +526,7 @@ const NewGameDecisionHandler = {
                 }
                 
                 return handlerInput.responseBuilder
-                    .speak(`<voice name="${voiceConfig.voice}"><prosody rate="slow">${randomMessage}</prosody></voice>`)
+                    .speak(generateSpeech(`${randomMessage}`, voiceConfig))
                     .withShouldEndSession(true)
                     .getResponse();
             }
@@ -555,21 +536,17 @@ const NewGameDecisionHandler = {
                 attributesManager.setSessionAttributes(attributes);
                 
                 return handlerInput.responseBuilder
-                    .speak(`<voice name="${voiceConfig.voice}"><prosody rate="slow">¡Genial! ¿Sois los mismos jugadores?</prosody></voice>`)
-                    .reprompt("¿Sois los mismos jugadores?")
+                    .speak(generateSpeech(`¡Genial! ¿Sois los mismos jugadores?`, voiceConfig))
+                    .reprompt(generateSpeech(`¿Sois los mismos jugadores?`, voiceConfig))
                     .getResponse();
             }
             
             return handlerInput.responseBuilder
-                .speak("No he entendido tu respuesta. ¿Queréis jugar otra vez?")
-                .reprompt("¿Queréis jugar otra vez?")
+                .speak(generateSpeech(`No he entendido tu respuesta. ¿Queréis jugar otra vez?`, voiceConfig))
+                .reprompt(generateSpeech(`¿Queréis jugar otra vez?`, voiceConfig))
                 .getResponse();
         } catch (error) {
-            console.error('Error in NewGameDecisionHandler:', error);
-            return handlerInput.responseBuilder
-                .speak('Vamos a empezar una nueva partida. ¿Cuántos jugadores sois?')
-                .reprompt("Por favor, dime cuántos jugadores van a jugar hoy.")
-                .getResponse();
+            return ErrorHandler.handleNewGameDecisionError(handlerInput, error);
         }
     }
 };
@@ -616,8 +593,8 @@ const SamePlayersHandler = {
                 attributesManager.setSessionAttributes(attributes);
                 
                 return handlerInput.responseBuilder
-                    .speak(`<voice name="${voiceConfig.voice}"><prosody rate="slow">Perfecto, somos la misma pandilla. ¡Vamos a recordar más momentos! ¿Preparados?</prosody></voice>`)
-                    .reprompt("¿Listos para empezar la nueva partida?")
+                    .speak(generateSpeech(`Perfecto, ¡somos la misma pandilla! ¡Vamos a recordar más momentos! ¿Preparados?`, voiceConfig))
+                    .reprompt(generateSpeech(`¿Listos para empezar la nueva partida?`, voiceConfig))
                     .getResponse();
             }
             
@@ -629,21 +606,17 @@ const SamePlayersHandler = {
                 attributesManager.setSessionAttributes(attributes);
                 
                 return handlerInput.responseBuilder
-                    .speak(`<voice name="${voiceConfig.voice}"><prosody rate="slow">Entendido. Vamos a empezar de cero. ¿Cuántos jugadores sois?</prosody></voice>`)
-                    .reprompt("Por favor, dime cuántos jugadores vais a jugar.")
+                    .speak(generateSpeech(`Entendido. Vamos a empezar de cero. ¿Cuántos jugadores sois?`, voiceConfig))
+                    .reprompt(generateSpeech(`Por favor, dime cuántos jugadores vais a jugar.`, voiceConfig))
                     .getResponse();
             }
             
             return handlerInput.responseBuilder
-                .speak("No he entendido tu respuesta. ¿Sois los mismos jugadores?")
-                .reprompt("¿Son los mismos jugadores o hay nuevos participantes?")
+                .speak(generateSpeech(`No he entendido tu respuesta. ¿Sois los mismos jugadores?`, voiceConfig))
+                .reprompt(generateSpeech(`¿Sois los mismos jugadores o hay nuevos participantes?`, voiceConfig))
                 .getResponse();
         } catch (error) {
-            console.error('Error in SamePlayersHandler:', error);
-            return handlerInput.responseBuilder
-                .speak('Vamos a empezar una nueva partida. ¿Cuántos jugadores sois hoy?')
-                .reprompt("Por favor, dime cuántos jugadores van a jugar hoy.")
-                .getResponse();
+            return ErrorHandler.handleSamePlayersError(handlerInput, error);
         }
     }
 };
@@ -717,119 +690,16 @@ async function handleAnswer(handlerInput, voiceConfig) {
         attributes.currentPlayerName = attributes.players[attributes.currentPlayerIndex].name;
         attributesManager.setSessionAttributes(attributes);
         
-        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">` +
-            `${getRandomFeedback(isCorrect, possibleAnswers[0], voiceConfig)} ` +
-            `¿Listos para la siguiente pregunta?</prosody></voice>`;
+        const speakOutput = generateSpeech(`${getRandomFeedback(isCorrect, possibleAnswers[0], voiceConfig)} ¿Listos para la siguiente pregunta?`, voiceConfig);
         
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            .reprompt("¿Queréis seguir con la siguiente pregunta?")
+            .reprompt(generateSpeech(`¿Queréis seguir con la siguiente pregunta?`, voiceConfig))
             .getResponse();
     } catch (error) {
-        console.error('Error in handleAnswer:', error);
-        
-        const attributes = handlerInput.attributesManager.getSessionAttributes();
-        const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
-        
-        let speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">` +
-                         `Ha habido un error al procesar tu respuesta. Vamos a intentarlo de nuevo. `;
-        
-        if (attributes.currentQuestion) {
-            speakOutput += `La pregunta era: ${attributes.currentQuestion.question}`;
-        } else {
-            speakOutput += `Por favor, responde a la pregunta.`;
-        }
-        
-        speakOutput += `</prosody></voice>`;
-        
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .reprompt("¿Cuál es tu respuesta?")
-            .getResponse();
+        return ErrorHandler.handleAnswerError(handlerInput, error);
     }
 }
-
-async function askNextQuestion(handlerInput, voiceConfig) {
-    try {
-        const { attributesManager } = handlerInput;
-        const attributes = attributesManager.getSessionAttributes();
-        
-        verifySessionAttributes(attributes);
-        
-        if (!attributes.questionsPerPlayer) {
-            attributes.questionsPerPlayer = {};
-            attributes.players.forEach(player => {
-                attributes.questionsPerPlayer[player.name] = 0;
-            });
-        }
-        
-        attributes.questionsPerPlayer[attributes.currentPlayerName] = 
-            (attributes.questionsPerPlayer[attributes.currentPlayerName] || 0) + 1;
-        
-        const minQuestions = Math.min(...Object.values(attributes.questionsPerPlayer));
-        if (minQuestions >= 2) {
-            return startFinalTeamQuestion(handlerInput, voiceConfig);
-        }
-        
-        const availableCategories = Object.keys(questions).filter(cat => cat !== 'FINAL');
-        
-        if (availableCategories.length === 0) {
-            return startFinalTeamQuestion(handlerInput, voiceConfig);
-        }
-        
-        if (!attributes.currentCategory || 
-            !questions[attributes.currentCategory] || 
-            questions[attributes.currentCategory].filter(q => !attributes.questionsAsked.includes(q.question)).length === 0) {
-            
-            attributes.currentCategory = availableCategories[Math.floor(Math.random() * availableCategories.length)];
-            attributes.questionsAsked = [];
-        }
-        
-        let questionsLeft = questions[attributes.currentCategory].filter(q => 
-            !attributes.questionsAsked.includes(q.question)
-        );
-        
-        if (questionsLeft.length === 0) {
-            const remainingCategories = availableCategories.filter(cat => cat !== attributes.currentCategory);
-            
-            if (remainingCategories.length === 0) {
-                return startFinalTeamQuestion(handlerInput, voiceConfig);
-            }
-            
-            attributes.currentCategory = remainingCategories[Math.floor(Math.random() * remainingCategories.length)];
-            attributes.questionsAsked = [];
-            questionsLeft = questions[attributes.currentCategory];
-        }
-        
-        attributes.questionCounter = (attributes.questionCounter || 0) + 1;
-        
-        if (attributes.questionCounter % 3 === 0 && attributes.players.length > 1) {
-            return startTeamQuestion(handlerInput, voiceConfig);
-        }
-        
-        const question = questionsLeft[0];
-        attributes.currentQuestion = question;
-        attributes.questionsAsked.push(question.question);
-        attributes.gameState = gameStates.INDIVIDUAL_QUESTION;
-        
-        attributesManager.setSessionAttributes(attributes);
-        
-        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">La siguiente pregunta es para ${attributes.currentPlayerName}. ${question.question}. Debes decirme "La respuesta es ..."</prosody></voice>`;
-        
-        aplUtils.showQuestionWithImage(handlerInput, question);
-
-        return handlerInput.responseBuilder
-            .speak(speakOutput)
-            .reprompt(`¿${attributes.currentPlayerName}, cuál es tu respuesta?`)
-            .getResponse();
-    } catch (error) {
-        console.error('Error in askNextQuestion:', error);
-        return handlerInput.responseBuilder
-            .speak('Ha habido un problema al preparar la siguiente pregunta. Volviendo al inicio.')
-            .getResponse();
-    }
-}
-
 
 function startFinalTeamQuestion(handlerInput, voiceConfig) {
     try {
@@ -851,17 +721,14 @@ function startFinalTeamQuestion(handlerInput, voiceConfig) {
 
         aplUtils.showQuestionWithImage(handlerInput, finalQuestion);
         
-        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡Pregunta final grupal! Elegid entre todos la respuesta. ${finalQuestion.question} Debeis decirme: "La respuesta es ..."</prosody></voice>`;
+        const speakOutput = generateSpeech(`¡Pregunta final grupal! Elegid entre todos la respuesta. ${finalQuestion.question} Debeis decirme: "La respuesta es ..."`, voiceConfig);
         
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            .reprompt("¿Cuál es vuestra respuesta como equipo?")
+            .reprompt(generateSpeech(`¿Cuál es vuestra respuesta como equipo?`, voiceConfig))
             .getResponse();
     } catch (error) {
-        console.error('Error in startFinalTeamQuestion:', error);
-        return handlerInput.responseBuilder
-            .speak('Vamos a ver los recuerdos que habéis evocado hoy.')
-            .getResponse();
+        return ErrorHandler.handleStartFinalTeamQuestionError(handlerInput, error);
     }
 }
 
@@ -884,7 +751,7 @@ const PassQuestionIntentHandler = {
         attributes.awaitingHintResponse = true;
         attributesManager.setSessionAttributes(attributes);
 
-        let speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">¿Quieres que te dé una pista para ayudarte?</prosody></voice>`;
+        let speakOutput = generateSpeech(`¿Quieres que te dé una pista para ayudarte?`, voiceConfig);
         
         let repromptMessage;
         
@@ -900,7 +767,7 @@ const PassQuestionIntentHandler = {
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            .reprompt(repromptMessage)
+            .reprompt(generateSpeech(repromptMessage, voiceConfig))
             .getResponse();
     }
 };
@@ -929,13 +796,13 @@ const HintOfferResponseHandler = {
             const possibleAnswers = attributes.currentQuestion.answers || [attributes.currentQuestion.answer];
             const correctAnswer = possibleAnswers[0];
             
-            let speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">No pasa nada. La respuesta correcta era: ${correctAnswer}.¡A la siguiente! </prosody></voice>`;
+            let speakOutput = generateSpeech(`No pasa nada. La respuesta correcta era: ${correctAnswer}.¡A la siguiente!`, voiceConfig);
 
             if (attributes.gameState === gameStates.INDIVIDUAL_QUESTION) {
                 attributes.currentPlayerIndex = (attributes.currentPlayerIndex + 1) % attributes.players.length;
                 attributes.currentPlayerName = attributes.players[attributes.currentPlayerIndex].name;
                 
-                speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¿Listos para la siguiente pregunta?</prosody></voice>`;
+                speakOutput += generateSpeech(`¿Listos para la siguiente pregunta?`, voiceConfig);
                 
                 attributes.expectingContinueConfirmation = true;
                 attributesManager.setSessionAttributes(attributes);
@@ -950,14 +817,14 @@ const HintOfferResponseHandler = {
                 attributes.currentPlayerName = attributes.players[attributes.currentPlayerIndex].name;
                 attributes.gameState = gameStates.INDIVIDUAL_QUESTION; 
                 
-                speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¿Listos para continuar?</prosody></voice>`;
+                speakOutput += generateSpeech(`¿Listos para continuar?`, voiceConfig);
                 
                 attributes.expectingContinueConfirmation = true;
                 attributesManager.setSessionAttributes(attributes);
                 
                 return handlerInput.responseBuilder
                     .speak(speakOutput)
-                    .reprompt("¿Listos para continuar?")
+                    .reprompt(generateSpeech(`¿Listos para continuar?`, voiceConfig))
                     .getResponse();
                 
             } else if (attributes.gameState === gameStates.FINAL_TEAM_QUESTION) {
@@ -966,39 +833,15 @@ const HintOfferResponseHandler = {
                 
                 aplUtils.showRanking(handlerInput, attributes.players);
                 
-                const sortedPlayers = [...attributes.players].sort((a, b) => b.score - a.score);
-                let rankingMessage = "";
-                
-                if (sortedPlayers.length === 1) {
-                    rankingMessage += `¡${sortedPlayers[0].name}, has conseguido ${sortedPlayers[0].score} puntos! `;
-                } else {
-                    const topScore = sortedPlayers[0].score;
-                    const topPlayers = sortedPlayers.filter(p => p.score === topScore);
-                    
-                    if (topPlayers.length > 1) {
-                        const names = topPlayers.map(p => p.name).join(' y ');
-                        rankingMessage += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡${names} habéis empatado en primer lugar con ${topScore} puntos! </prosody></voice>`;
-                    } else {
-                        rankingMessage += `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡${topPlayers[0].name} lidera con ${topScore} puntos! </prosody></voice>`;
-                    }
-
-                    const otherPlayers = sortedPlayers.filter(p => p.score < topScore);
-                    if (otherPlayers.length > 0) {
-                        rankingMessage += `<voice name="${voiceConfig.voice}"><prosody rate="slow">Aquí están los demás resultados: </prosody></voice>`;
-                        rankingMessage += otherPlayers.map(p => `<voice name="${voiceConfig.voice}"><prosody rate="slow">${p.name} con ${p.score} puntos</prosody></voice>`).join(', ') + '. ';
-                    }
-                }
-                
-                speakOutput += `<voice name="${voiceConfig.voice}"><prosody rate="slow">Vamos a ver los recuerdos que habéis evocado hoy. </prosody></voice>` + 
-                              rankingMessage + 
-                              `<voice name="${voiceConfig.voice}"><prosody rate="slow">¿Queréis jugar otra partida?</prosody></voice>`;
+                const speakOutput = generateSpeech(`No pasa nada. La respuesta correcta era: ${correctAnswer}.`, voiceConfig) + 
+                                  rankingUtils.getFullRankingAnnouncement(attributes.players);
                 
                 attributes.gameState = gameStates.ASKING_FOR_NEW_GAME;
                 attributesManager.setSessionAttributes(attributes);
                 
                 return handlerInput.responseBuilder
                     .speak(speakOutput)
-                    .reprompt("¿Queréis jugar otra partida?")
+                    .reprompt(generateSpeech(`¿Queréis jugar otra partida?`, voiceConfig))
                     .getResponse();
             }
         }
@@ -1015,5 +858,5 @@ module.exports = {
     NewGameDecisionHandler,
     SessionEndedRequestHandler,
     PassQuestionIntentHandler,      
-    HintOfferResponseHandler 
+    HintOfferResponseHandler
 };

@@ -43,7 +43,6 @@ function showStaticImage(handlerInput, message = "¡Bienvenidos/as a Regreso al 
         });
     }
 }
-
 function showPlayerWelcome(handlerInput, playerName) {
     if (supportsAPL(handlerInput)) {
         const upperCaseName = playerName.toUpperCase();

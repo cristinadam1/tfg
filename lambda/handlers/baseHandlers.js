@@ -21,7 +21,8 @@ const LaunchRequestHandler = {
     },
     handle(handlerInput) {
         const attributes = handlerInput.attributesManager.getSessionAttributes();
-        
+        aplUtils.showWelcomeLogo(handlerInput, "¡Bienvenidos a Regreso al Pasado!");
+
         attributes.gameState = gameStates.REGISTERING_PLAYER_COUNT;
         attributes.players = [];
         attributes.currentPlayer = 1;
@@ -32,8 +33,6 @@ const LaunchRequestHandler = {
         handlerInput.attributesManager.setSessionAttributes(attributes);
 
         const speakOutput = generateSpeech('¿Queréis que os explique cómo funciona el juego?', true);
-
-        aplUtils.showStaticImage(handlerInput, "¡Bienvenidos/as a Regreso al Pasado!");
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -69,6 +68,8 @@ const GameExplanationHandler = {
                 'Y muy importante, si me quedo dormida, debeis llamarme por mi nombre, que es Alexa, para que os escuche. ' +
                 '¡Vamos a empezar.! ¿Cuántos jugadores sois hoy?'
             );
+
+            aplUtils.showWelcomeLogo(handlerInput, "Guía explicativa");
             
             return handlerInput.responseBuilder
                 .speak(explanation)
@@ -87,14 +88,17 @@ const GameExplanationHandler = {
 
 const CancelAndStopIntentHandler = {
     canHandle(handlerInput) {
-        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
-            && (Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.CancelIntent'
-                || Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.StopIntent');
+        return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+               (Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.StopIntent');
     },
+    
     handle(handlerInput) {
-        const speakOutput = generateSpeech('¡Hasta luego!');
+        const voiceConfig = voiceRoles.getVoiceConfig(voiceRoles.getRoleByTime());
+        const speakOutput = `<voice name="${voiceConfig.voice}"><prosody rate="slow">¡Gracias por jugar a Regreso al Pasado! ¡Hasta la próxima!</prosody></voice>`;
+        
         return handlerInput.responseBuilder
             .speak(speakOutput)
+            .withShouldEndSession(true)
             .getResponse();
     }
 };
@@ -105,8 +109,24 @@ const ErrorHandler = {
     },
     handle(handlerInput, error) {
         console.error('Error handled:', error);
-        const speakOutput = generateSpeech('Creo que no te he entendido. Por favor inténtalo de nuevo.');
-        const repromptOutput = generateSpeech('Perdona, sigo sin entenderte. Pídele ayuda a alguno de mis creadores');
+        
+        const attributes = handlerInput.attributesManager.getSessionAttributes();
+        let speakOutput;
+        let repromptOutput;
+
+        if (attributes.gameState === gameStates.REGISTERING_PLAYER_COUNT) {
+            speakOutput = generateSpeech('Creo que no te he entendido. Tienes que decirme "somos", seguido del número de jugadores que seáis. Por ejemplo: "somos 3 jugadores".');
+            repromptOutput = generateSpeech('¿Cuántos jugadores van a participar hoy? Por ejemplo: "somos 2 jugadores"');
+        } 
+        else if (attributes.gameState === gameStates.REGISTERING_PLAYER_NAMES) {
+            const currentPlayer = attributes.players[attributes.currentPlayer - 1] || { name: `Jugador ${attributes.currentPlayer}` };
+            speakOutput = generateSpeech(`Perdona, no he entendido tu nombre. ${currentPlayer.name}, ¿Podrías repetírmelo diciendome "me llamo", seguido de tu nombre. Por ejemplo: "Me llamo Isa"?`);
+            repromptOutput = generateSpeech(`Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`);
+        }
+        else {
+            speakOutput = generateSpeech('Creo que no te he entendido. Por favor inténtalo de nuevo.');
+            repromptOutput = generateSpeech('Perdona, sigo sin entenderte. Pídele ayuda a alguno de mis creadores');
+        }
         
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -125,16 +145,8 @@ const FallbackIntentHandler = {
         let speakOutput;
         let repromptOutput;
 
-        if (attributes.gameState === gameStates.REGISTERING_PLAYER_COUNT) {
-            speakOutput = generateSpeech('No he entendido cuántos jugadores sois. Por favor, dime algo como: "somos 3 jugadores" o "jugamos 4 personas".');
-            repromptOutput = generateSpeech('¿Cuántos jugadores van a participar hoy?');
-        } 
-        else if (attributes.gameState === gameStates.REGISTERING_PLAYER_NAMES) {
-            const currentPlayer = attributes.players[attributes.currentPlayer - 1] || { name: `Jugador ${attributes.currentPlayer}` };
-            speakOutput = generateSpeech(`No he entendido tu nombre. ${currentPlayer.name}, ¿podrías repetirlo claramente?`);
-            repromptOutput = generateSpeech(`Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`);
-        }
-        else if (attributes.gameState === gameStates.ASKING_FAVORITE_SONGS) {
+        
+        if (attributes.gameState === gameStates.ASKING_FAVORITE_SONGS) {
             const currentPlayer = attributes.players[attributes.currentPlayer];
             speakOutput = generateSpeech(`Creo que no te he entendido. Tienes que decir "mi canción favorita es" seguido del nombre de la canción. Por ejemplo: "mi canción favorita es libre".`);
             repromptOutput = generateSpeech(`${currentPlayer.name}, ¿cuál es tu canción favorita? Di algo como: "mi canción favorita es libre"`);
@@ -351,6 +363,8 @@ const PlayerCountIntentHandler = {
         const playerCount = parseInt(Alexa.getSlotValue(handlerInput.requestEnvelope, 'count'));
         const { attributesManager, requestEnvelope } = handlerInput;
         const attributes = attributesManager.getSessionAttributes();
+
+        aplUtils.showStaticImage(handlerInput, `Registrando ${playerCount} jugadores`);
         
         console.log(`Número de jugadores recibido: ${playerCount}`);
         

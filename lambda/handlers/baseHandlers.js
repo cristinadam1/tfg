@@ -136,8 +136,8 @@ const ErrorHandler = {
             repromptOutput = generateSpeech(`Jugador ${attributes.currentPlayer}, ¿cómo te llamas?`);
         }
         else {
-            speakOutput = generateSpeech('Creo que no te he entendido. Por favor inténtalo de nuevo.');
-            repromptOutput = generateSpeech('Perdona, sigo sin entenderte. Pídele ayuda a alguno de mis creadores');
+            speakOutput = generateSpeech('Perdona, no te he entendido bien. ¿Puedes repetirlo? Debes decir: La respuesta es');
+            repromptOutput = generateSpeech('¿Cuál es tu respuesta?. Recuerda empezar por "La respuesta es Francia".');
         }
         
         return handlerInput.responseBuilder

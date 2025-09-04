@@ -140,7 +140,7 @@ module.exports = {
       photo: "gato.png"
     },
     {
-      question: "¿Qué animal se conoce como el 'rey de la selva'?",
+      question: "¿Qué animal se conoce como el rey de la selva?",
       answers: ["león", "el león", "los leones"],
       hints: ["Tiene melena", "Es un felino grande"],
       photo: "leon.png"
@@ -307,7 +307,7 @@ module.exports = {
       photo: "pelicula.png"
     },
     {
-      question: "¿Qué grupo musical español cantaba 'Eres tú' en Eurovisión 1973?",
+      question: "¿Qué grupo musical español cantaba, Eres tú, en Eurovisión 1973?",
       answer: "Mocedades",
       hints: ["Eran del País Vasco", "Quedaron en segundo lugar", "Empieza por la letra M"],
       photo: "mocedades.png"

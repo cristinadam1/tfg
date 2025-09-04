@@ -317,6 +317,8 @@ const GetPlayerNameIntentHandler = {
         }
 
         const trimmedPlayerName = playerName.trim();
+        aplUtils.showPlayerWelcome(handlerInput, trimmedPlayerName);
+
         attributes.players.push({
             name: trimmedPlayerName,
             score: 0,
@@ -402,6 +404,8 @@ const GetFavoriteSongIntentHandler = {
         const attributes = attributesManager.getSessionAttributes();
         const intentName = Alexa.getIntentName(handlerInput.requestEnvelope);
         const currentPlayerName = attributes.players[attributes.currentPlayer].name;
+
+        aplUtils.showStaticImage(handlerInput, "Canciones favoritas");
         
         if (intentName !== 'GetFavoriteSongIntent') {
             const speakOutput = generateSpeech('Tienes que decirme el nombre de una canción, empezando diciendo "mi cancion favorita es", seguido del nombre de la canción.');

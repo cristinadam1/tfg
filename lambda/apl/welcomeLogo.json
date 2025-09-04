@@ -1,0 +1,41 @@
+{
+    "type": "APL",
+    "version": "1.4",
+    "import": [
+      {
+        "name": "alexa-layouts",
+        "version": "1.7.0"
+      }
+    ],
+    "mainTemplate": {
+      "items": [
+        {
+          "type": "Container",
+          "width": "100%",
+          "height": "100%",
+          "alignItems": "center",
+          "justifyContent": "center",
+          "items": [
+            {
+              "type": "AlexaBackground",
+              "backgroundColor": "#000000"
+            },
+            {
+              "type": "Image",
+              "source": "https://imagenesregresopasado.s3.eu-west-1.amazonaws.com/logoRegresoPasado.png",
+              "width": "70%",
+              "height": "70%",
+              "scale": "best-fit"
+            },
+            {
+              "type": "Text",
+              "text": "¡Bienvenidos a Regreso al Pasado!",
+              "color": "#FFFFFF",
+              "fontSize": "60dp",
+              "marginTop": "15dp"
+            }
+          ]
+        }
+      ]
+    }
+  }

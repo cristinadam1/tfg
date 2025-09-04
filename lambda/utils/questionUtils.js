@@ -4,34 +4,31 @@ const getNextAvailableQuestion = (attributes) => {
     const availableCategories = Object.keys(questions).filter(cat => cat !== 'FINAL');
     
     if (availableCategories.length === 0) {
+        return null;
+    }
+    
+    const categoriesWithAvailableQuestions = availableCategories.filter(category => {
+        const categoryQuestions = questions[category];
+        return categoryQuestions.some(q => !attributes.questionsAsked?.includes(q.question));
+    });
+    
+    if (categoriesWithAvailableQuestions.length === 0) {
         return null; 
     }
     
-    if (!attributes.currentCategory || 
-        !questions[attributes.currentCategory] || 
-        questions[attributes.currentCategory].filter(q => !attributes.questionsAsked.includes(q.question)).length === 0) {
-        
-        attributes.currentCategory = availableCategories[Math.floor(Math.random() * availableCategories.length)];
-        attributes.questionsAsked = [];
-    }
+    const randomCategoryIndex = Math.floor(Math.random() * categoriesWithAvailableQuestions.length);
+    const selectedCategory = categoriesWithAvailableQuestions[randomCategoryIndex];
     
-    let questionsLeft = questions[attributes.currentCategory].filter(q => 
-        !attributes.questionsAsked.includes(q.question)
+    const availableQuestions = questions[selectedCategory].filter(q => 
+        !attributes.questionsAsked?.includes(q.question)
     );
     
-    if (questionsLeft.length === 0) {
-        const remainingCategories = availableCategories.filter(cat => cat !== attributes.currentCategory);
-        
-        if (remainingCategories.length === 0) {
-            return null; 
-        }
-        
-        attributes.currentCategory = remainingCategories[Math.floor(Math.random() * remainingCategories.length)];
-        attributes.questionsAsked = [];
-        questionsLeft = questions[attributes.currentCategory];
+    if (availableQuestions.length === 0) {
+        return null; 
     }
     
-    return questionsLeft[0];
+    const randomQuestionIndex = Math.floor(Math.random() * availableQuestions.length);
+    return availableQuestions[randomQuestionIndex];
 };
 
 module.exports = { getNextAvailableQuestion };

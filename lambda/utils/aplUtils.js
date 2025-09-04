@@ -1,7 +1,9 @@
 const Alexa = require('ask-sdk-core');
 const staticImageDocument = require('../apl/staticImage.json');
+const welcomeLogoDocument = require('../apl/welcomeLogo.json');
 const questionScreenDocument = require('../apl/questionScreen.json');
 const rankingScreenDocument = require('../apl/rankingScreen.json');
+
 
 function supportsAPL(handlerInput) {
     try {
@@ -12,7 +14,20 @@ function supportsAPL(handlerInput) {
         return false;
     }
 }
-
+function showWelcomeLogo(handlerInput, message = "¡Bienvenidos a Regreso al Pasado!") {
+    if (supportsAPL(handlerInput)) {
+        handlerInput.responseBuilder.addDirective({
+            type: 'Alexa.Presentation.APL.RenderDocument',
+            version: '2023.3',
+            document: welcomeLogoDocument,
+            datasources: {
+                "data": {
+                    "message": message
+                }
+            }
+        });
+    }
+}
 function showStaticImage(handlerInput, message = "¡Bienvenidos/as a Regreso al Pasado!") {
     if (supportsAPL(handlerInput)) {
         handlerInput.responseBuilder.addDirective({
@@ -99,6 +114,7 @@ function showRanking(handlerInput, players) {
 
 module.exports = {
     supportsAPL,
+    showWelcomeLogo,
     showStaticImage,
     showQuestionWithImage,
     showRanking  

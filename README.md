@@ -28,7 +28,7 @@ Este proyecto se enmarca dentro de la investigación *SIA-EnveSalud* ("Evaluaci�
     * Uso de **Amazon Polly** para adaptar la voz y el tono de Alexa según la hora del día.
     * Feedback positivo constante y mensajes de ánimo.
     * Apoyo visual con imágenes grandes y claras.
-* **Co-Diseño:** El desarrollo se basó en sesiones participativas con residentes de los centros *María Auxiliadora* y *EntreÁlamos*, integrando sus preferencias reales (gustos musicales, imágenes y temáticas).
+* **Co-Diseño:** El desarrollo se ha basado en sesiones participativas con residentes de los centros *María Auxiliadora* y *EntreÁlamos*, integrando sus preferencias reales (gustos musicales, imágenes y temáticas).
 
 ## 🛠️ Tecnologías utilizadas
 

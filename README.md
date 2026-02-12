@@ -1,10 +1,10 @@
-# Regreso al Pasado - Skill de Alexa para Personas Mayores
+# Regreso al pasado - Skill de Alexa para adultos mayores
 
 **Trabajo de Fin de Grado (TFG) - Ingeniería Informática** **Universidad de Granada (UGR)**
 
-## 📖 Descripción del Proyecto
+## 📖 Descripción del proyecto
 
-**Regreso al Pasado** es un *juego serio* desarrollado como una Skill de Alexa, diseñado específicamente para **personas mayores** en residencias y centros de día.
+**Regreso al pasado** es un *juego serio* desarrollado como una Skill de Alexa, diseñado específicamente para **personas mayores** en residencias y centros de día.
 
 El objetivo principal de la aplicación es fomentar la **interacción social**, la **estimulación cognitiva** (a través de la reminiscencia) y el **bienestar emocional** de los usuarios. Utilizando una interfaz de voz natural y apoyo visual en dispositivos con pantalla (como Echo Show), el juego actúa como un moderador lúdico que evoca recuerdos positivos sobre música, cine, costumbres y eventos de las décadas de los 50 a los 80.
 
@@ -16,10 +16,10 @@ Este proyecto se enmarca dentro de la investigación *SIA-EnveSalud* ("Evaluaci�
 * **Estimulación Cognitiva:** Ejercitar la memoria a largo plazo a través de la terapia de reminiscencia.
 * **Accesibilidad Tecnológica:** Romper la brecha digital facilitando el uso de tecnología mediante la voz, eliminando barreras físicas y cognitivas.
 
-## ⚙️ Características Principales
+## ⚙️ Características principales
 
 * **Multijugador:** Diseñado para grupos de 2 a 8 jugadores (también permite modo individual).
-* **Dinámica de Juego:**
+* **Dinámica de juego:**
     * Registro de usuarios y sus canciones favoritas.
     * Preguntas adaptadas culturalmente (años 50-80).
     * Rondas de preguntas individuales y colaborativas (en equipo).
@@ -30,7 +30,7 @@ Este proyecto se enmarca dentro de la investigación *SIA-EnveSalud* ("Evaluaci�
     * Apoyo visual con imágenes grandes y claras.
 * **Co-Diseño:** El desarrollo se basó en sesiones participativas con residentes de los centros *María Auxiliadora* y *EntreÁlamos*, integrando sus preferencias reales (gustos musicales, imágenes y temáticas).
 
-## 🛠️ Tecnologías Utilizadas
+## 🛠️ Tecnologías utilizadas
 
 Este proyecto utiliza una arquitectura **Serverless** sobre **AWS**:
 
@@ -43,7 +43,7 @@ Este proyecto utiliza una arquitectura **Serverless** sobre **AWS**:
 * **Interfaz Visual:** Alexa Presentation Language (APL).
 * **Herramientas:** VS Code, ASK CLI.
 
-## 🚀 Instalación y Despliegue
+## 🚀 Instalación y despliegue
 
 Para desplegar esta skill en tu propia cuenta de desarrollador de Amazon:
 
@@ -72,7 +72,7 @@ Para desplegar esta skill en tu propia cuenta de desarrollador de Amazon:
     ask deploy
     ```
 
-## 📄 Estructura del Proyecto
+## 📄 Estructura del proyecto
 
 * `/lambda`: Código fuente del backend (Node.js).
     * `/game`: Lógica de estados del juego.
@@ -81,7 +81,7 @@ Para desplegar esta skill en tu propia cuenta de desarrollador de Amazon:
 * `/skill-package`: Manifiesto de la skill y modelos de interacción (JSON).
 * `/apls`: Documentos visuales (APL) para dispositivos con pantalla.
 
-## 👥 Autoría y Créditos
+## 👥 Autoría y créditos
 
 * **Autora:** Cristina del Águila Martín
 * **Tutora:** Nuria Medina Medina
